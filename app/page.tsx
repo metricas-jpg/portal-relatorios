@@ -64,11 +64,12 @@ function ConteudoHome() {
     }
   }, [status]);
 
-  const getThumbnailUrl = (id: string, urlVisualizacao: string) => {
+  // Aponta para a nova rota interna que busca a miniatura autenticada via Service Account
+  const getThumbnailUrl = (id: string) => {
     if (id) {
-      return `https://drive.google.com/thumbnail?id=${id}&sz=w600`;
+      return `/api/relatorios/thumbnail?id=${id}`;
     }
-    return urlVisualizacao;
+    return '';
   };
 
   const formatarParaIso = (dataStr: string) => {
@@ -436,7 +437,7 @@ function ConteudoHome() {
           </div>
         )}
 
-        {/* Grade de Cards com Thumbnail */}
+        {/* Grade de Cards com Thumbnail e Placeholder de Fundo */}
         {!loading && !erro && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {relatoriosFiltrados.length === 0 ? (
@@ -449,19 +450,31 @@ function ConteudoHome() {
                   key={rel.id} 
                   className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col group"
                 >
+                  {/* Container da Capa com Placeholder Visual */}
                   <div 
                     onClick={() => setModalPdf(rel)}
                     className="relative w-full h-48 bg-slate-100 overflow-hidden cursor-pointer border-b border-slate-100 flex items-center justify-center group-hover:opacity-95 transition"
                   >
+                    {/* Placeholder: ícone e texto exibidos caso a imagem demore ou falhe */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 pointer-events-none select-none">
+                      <svg className="w-12 h-12 mb-1.5 text-slate-300 group-hover:text-[#00AE9D] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">Relatório PDF</span>
+                    </div>
+
+                    {/* Imagem real servida pela rota interna /api/relatorios/thumbnail */}
                     <img
-                      src={getThumbnailUrl(rel.id, rel.urlVisualizacao)}
+                      src={getThumbnailUrl(rel.id)}
                       alt={`Capa de ${rel.titulo || rel.nome}`}
-                      className="w-full h-full object-cover object-top"
+                      className="w-full h-full object-cover object-top relative z-10"
                       onError={(e) => {
                         (e.target as HTMLElement).style.display = 'none';
                       }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+
+                    {/* Efeito Hover com indicação de clique */}
+                    <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
                       <span className="text-white text-xs font-medium bg-[#003641]/80 px-2.5 py-1 rounded-md backdrop-blur-sm">
                         Clique para expandir ↗
                       </span>
