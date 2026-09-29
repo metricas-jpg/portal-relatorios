@@ -26,7 +26,7 @@ function ConteudoHome() {
   const [erro, setErro] = useState('');
   const [busca, setBusca] = useState('');
   
-  // Ordenação
+  // Ordenação com valor padrão: mais recentes primeiro
   const [ordenacao, setOrdenacao] = useState<TipoOrdenacao>('data-desc');
 
   // Estados para o seletor de datas
@@ -96,7 +96,6 @@ function ConteudoHome() {
     return `${dia}/${mes}/${ano}`;
   };
 
-  // Limpa extensões técnicas e sufixos desnecessários do título
   const sanitizarTitulo = (titulo: string, nomeArquivo: string) => {
     let t = titulo || nomeArquivo || '';
     t = t.replace(/\.(pptx|pdf|docx|xlsx)$/i, '');
@@ -115,7 +114,7 @@ function ConteudoHome() {
     if (dataFim) {
       return `Até ${formatarParaBr(dataFim)}`;
     }
-    return 'Todas as datas';
+    return 'Todo o período';
   };
 
   const aplicarFiltroData = () => {
@@ -214,7 +213,7 @@ function ConteudoHome() {
     );
   }
 
-  // 1. Filtragem por busca e período
+  // Filtragem
   const relatoriosFiltrados = relatorios.filter((item) => {
     const termo = busca.toLowerCase();
     const tituloLimpo = sanitizarTitulo(item.titulo, item.nome).toLowerCase();
@@ -236,7 +235,7 @@ function ConteudoHome() {
     return matchTermo && matchRange;
   });
 
-  // 2. Ordenação dos relatórios
+  // Ordenação
   const relatoriosOrdenados = [...relatoriosFiltrados].sort((a, b) => {
     const dataA = formatarParaIso(a.data);
     const dataB = formatarParaIso(b.data);
@@ -318,7 +317,7 @@ function ConteudoHome() {
       {/* Conteúdo Principal */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         
-        {/* Command Bar Unificada (Busca + Filtro de Data + Ordenação) */}
+        {/* Command Bar Unificada */}
         <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-200/90 flex flex-col md:flex-row items-center gap-2 mb-3">
           
           {/* Campo de Pesquisa */}
@@ -339,7 +338,7 @@ function ConteudoHome() {
 
           <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
 
-          {/* Seletor de Data */}
+          {/* Seletor de Período */}
           <div className="relative w-full md:w-auto" ref={dropdownRef}>
             <button
               onClick={() => {
@@ -397,7 +396,7 @@ function ConteudoHome() {
                       onClick={() => aplicarPredefinido('tudo')}
                       className="text-left text-xs px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 transition"
                     >
-                      Todas as datas
+                      Todo o período
                     </button>
                   </div>
                 </div>
@@ -450,21 +449,37 @@ function ConteudoHome() {
 
           <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
 
-          {/* Seletor de Ordenação Integrado */}
-          <div className="flex items-center gap-1.5 w-full md:w-auto px-2">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider hidden lg:inline">
-              Ordem:
+          {/* Seletor de Ordenação com Affordance Iconográfica */}
+          <div className="relative flex items-center bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 transition group focus-within:ring-2 focus-within:ring-[#00AE9D] focus-within:border-transparent w-full md:w-auto">
+            <svg 
+              className="w-4 h-4 text-slate-500 group-hover:text-[#003641] transition-colors shrink-0" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
+
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider ml-2 hidden sm:inline pointer-events-none">
+              Ordenar:
             </span>
+
             <select
               value={ordenacao}
               onChange={(e) => setOrdenacao(e.target.value as TipoOrdenacao)}
-              className="w-full md:w-auto bg-slate-50 md:bg-transparent border md:border-none border-slate-200 rounded-xl md:rounded-none px-2.5 py-2 text-xs font-semibold text-[#003641] focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs font-semibold text-[#003641] pl-1.5 pr-6 py-0.5 focus:outline-none cursor-pointer appearance-none w-full md:w-auto"
             >
-              <option value="data-desc">Data: Mais recentes</option>
-              <option value="data-asc">Data: Mais antigos</option>
-              <option value="nome-asc">Título: A → Z</option>
-              <option value="nome-desc">Título: Z → A</option>
+              <option value="data-desc">Mais recentes</option>
+              <option value="data-asc">Mais antigos</option>
+              <option value="nome-asc">Título (A → Z)</option>
+              <option value="nome-desc">Título (Z → A)</option>
             </select>
+
+            <div className="absolute right-2.5 pointer-events-none text-slate-400">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
 
           {/* Botão Limpar Filtros */}
@@ -485,7 +500,7 @@ function ConteudoHome() {
           )}
         </div>
 
-        {/* Linha de Metadado Silenciosa (Contador Tufte Style) */}
+        {/* Linha de Metadado Silenciosa */}
         {!loading && !erro && (
           <div className="flex items-center justify-between px-2 mb-6 text-xs text-slate-500">
             <p>
@@ -533,12 +548,11 @@ function ConteudoHome() {
                     key={rel.id} 
                     className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col group"
                   >
-                    {/* Container da Capa com Linha Divisória de 1px e Placeholder */}
+                    {/* Container da Capa */}
                     <div 
                       onClick={() => setModalPdf(rel)}
                       className="relative w-full h-48 bg-slate-100 overflow-hidden cursor-pointer border-b border-slate-200/80 flex items-center justify-center group-hover:opacity-95 transition"
                     >
-                      {/* Placeholder de fundo */}
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 pointer-events-none select-none">
                         <svg className="w-12 h-12 mb-1.5 text-slate-300 group-hover:text-[#00AE9D] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -546,7 +560,6 @@ function ConteudoHome() {
                         <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">Relatório PDF</span>
                       </div>
 
-                      {/* Imagem autenticada */}
                       <img
                         src={getThumbnailUrl(rel.id)}
                         alt={`Capa de ${tituloExibicao}`}
@@ -556,7 +569,6 @@ function ConteudoHome() {
                         }}
                       />
 
-                      {/* Efeito Hover */}
                       <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
                         <span className="text-white text-xs font-medium bg-[#003641]/80 px-2.5 py-1 rounded-md backdrop-blur-sm">
                           Clique para expandir ↗
@@ -578,7 +590,7 @@ function ConteudoHome() {
                         </h2>
                       </div>
 
-                      {/* Ações: Primária em Destaque + Secundária Neutra */}
+                      {/* Ações */}
                       <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
                         <button
                           onClick={() => setModalPdf(rel)}
