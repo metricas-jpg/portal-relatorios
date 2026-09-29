@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { google } from 'googleapis';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
@@ -19,12 +20,15 @@ export async function GET(req: NextRequest) {
     const auth = new google.auth.JWT({
       email: process.env.GOOGLE_CLIENT_EMAIL,
       key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+      scopes: [
+        'https://www.googleapis.com/auth/drive.readonly',
+        'https://www.googleapis.com/auth/drive',
+      ],
     });
 
     const drive = google.drive({ version: 'v3', auth });
 
-    // Busca o link da miniatura gerado pela API do Google Drive
+    // Consulta os metadados do arquivo para obter a miniatura gerada pelo Drive
     const fileRes = await drive.files.get({
       fileId,
       fields: 'thumbnailLink, hasThumbnail',
@@ -34,40 +38,28 @@ export async function GET(req: NextRequest) {
     let thumbUrl = fileRes.data.thumbnailLink;
 
     if (!thumbUrl) {
-      return NextResponse.json({ error: 'Miniatura não disponível' }, { status: 404 });
+      return NextResponse.json({ error: 'Miniatura indisponível' }, { status: 404 });
     }
 
-    // Altera o tamanho padrão (s220) para w600 para melhor resolução
+    // Aumenta a resolução da miniatura de s220 para w600
     thumbUrl = thumbUrl.replace(/=s\d+/, '=w600');
 
-    // Faz o download da imagem pelo servidor autenticado
-    const imageRes = await fetch(thumbUrl, {
-      headers: {
-        Authorization: `Bearer ${(await auth.getAccessToken()).token}`,
-      },
-    });
+    const imageRes = await fetch(thumbUrl);
 
     if (!imageRes.ok) {
-      // Fallback caso a miniatura direta não responda
-      const directThumb = await fetch(thumbUrl);
-      if (!directThumb.ok) {
-        return NextResponse.json({ error: 'Erro ao buscar imagem' }, { status: 502 });
-      }
-      const buffer = await directThumb.arrayBuffer();
-      return new NextResponse(buffer, {
-        headers: {
-          'Content-Type': directThumb.headers.get('content-Type') || 'image/jpeg',
-          'Cache-Control': 'public, max-age=86400, s-maxage=86400',
-        },
-      });
+      return NextResponse.json(
+        { error: 'Falha ao descarregar miniatura do Google' },
+        { status: imageRes.status }
+      );
     }
 
     const imageBuffer = await imageRes.arrayBuffer();
+    const contentType = imageRes.headers.get('content-type') || 'image/jpeg';
 
     return new NextResponse(imageBuffer, {
       headers: {
-        'Content-Type': imageRes.headers.get('content-Type') || 'image/jpeg',
-        'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=43200',
       },
     });
   } catch (error) {
