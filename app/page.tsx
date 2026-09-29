@@ -418,7 +418,7 @@ function ConteudoHome() {
                   </div>
                 </div>
 
-                {/* 2. SEÇÃO DE PREDEFINIÇÕES COM FEEDBACK DE SELEÇÃO */}
+                {/* 2. SEÇÃO DE PREDEFINIÇÕES */}
                 <div className="pt-4 border-t border-slate-100 mb-5">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2.5">
                     Predefinições
@@ -452,7 +452,7 @@ function ConteudoHome() {
                   </div>
                 </div>
 
-                {/* 3. AÇÕES DE CONFIRMAÇÃO MANUAL */}
+                {/* 3. AÇÕES */}
                 <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                   <button
                     type="button"
@@ -549,7 +549,7 @@ function ConteudoHome() {
         {/* Estados de Carregamento e Erro */}
         {loading && (
           <div className="text-center py-20 text-slate-500 text-sm flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-4 border-[#003641] border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-4 border-[#00AE9D] border-t-transparent rounded-full animate-spin"></div>
             Carregando relatórios disponíveis...
           </div>
         )}
@@ -604,10 +604,10 @@ function ConteudoHome() {
                       </div>
                     </div>
 
-                    {/* Informações do Card com Altura e Espaçamento Calibrados */}
+                    {/* Informações do Card */}
                     <div className="p-5 flex-1 flex flex-col justify-between">
                       <div>
-                        {/* Pílula de Data com Alto Contraste */}
+                        {/* Pílula de Data */}
                         <div className="flex items-center gap-2 mb-2.5">
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#003641] bg-[#00AE9D]/15 border border-[#00AE9D]/25 px-2.5 py-0.5 rounded-md">
                             <span>📅</span>
@@ -621,7 +621,7 @@ function ConteudoHome() {
                         </h2>
                       </div>
 
-                      {/* Ações: Download via rota interna protegida */}
+                      {/* Ações */}
                       <div className="pt-3 mt-2 border-t border-slate-100 flex items-center gap-2">
                         <button
                           onClick={() => setModalPdf(rel)}
@@ -649,7 +649,7 @@ function ConteudoHome() {
         )}
       </main>
 
-    {/* Modal Leitor de PDF com Stream Interno Autenticado e Ação de Tela Cheia */}
+      {/* Modal Leitor de PDF com Botão de Tela Cheia em Nova Aba */}
       {modalPdf && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-3 sm:p-6 backdrop-blur-sm">
           <div className="bg-white w-full max-w-6xl h-[92vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl border border-slate-700">
@@ -706,6 +706,9 @@ function ConteudoHome() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
 
 export default function Home() {
   return (
