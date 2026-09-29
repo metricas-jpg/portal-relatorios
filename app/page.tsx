@@ -27,7 +27,7 @@ function ConteudoHome() {
   const [erro, setErro] = useState('');
   const [busca, setBusca] = useState('');
   
-  // Ordenação
+  // Ordenação com valor padrão: mais recentes primeiro
   const [ordenacao, setOrdenacao] = useState<TipoOrdenacao>('data-desc');
 
   // Estados de Datas e Presets
@@ -162,7 +162,6 @@ function ConteudoHome() {
     setTempFim(fim);
     setTempPreset(tipo);
 
-    // Aplicação imediata para agilizar o fluxo do usuário (Krug)
     setDataInicio(inicio);
     setDataFim(fim);
     setPresetAtivo(tipo);
@@ -397,7 +396,7 @@ function ConteudoHome() {
                       value={tempInicio}
                       onChange={(e) => {
                         setTempInicio(e.target.value);
-                        setTempPreset(null); // Desmarca o preset ao digitar manualmente (Norman)
+                        setTempPreset(null);
                       }}
                       className="w-full text-xs text-[#003641] border border-slate-200 bg-slate-50 rounded-xl px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-[#00AE9D]"
                     />
@@ -622,7 +621,7 @@ function ConteudoHome() {
                         </h2>
                       </div>
 
-                      {/* Ações */}
+                      {/* Ações: Download via rota interna protegida */}
                       <div className="pt-3 mt-2 border-t border-slate-100 flex items-center gap-2">
                         <button
                           onClick={() => setModalPdf(rel)}
@@ -631,9 +630,7 @@ function ConteudoHome() {
                           Ler na Tela
                         </button>
                         <a
-                          href={rel.urlDownload}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          href={`/api/relatorios/file?id=${rel.id}&download=true`}
                           className="border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2.5 rounded-xl flex items-center gap-1.5 transition"
                           title="Download direto do PDF"
                         >
@@ -652,7 +649,7 @@ function ConteudoHome() {
         )}
       </main>
 
-      {/* Modal Leitor de PDF */}
+      {/* Modal Leitor de PDF com Stream Interno Autenticado */}
       {modalPdf && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-3 sm:p-6 backdrop-blur-sm">
           <div className="bg-white w-full max-w-6xl h-[92vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl border border-slate-700">
@@ -662,9 +659,7 @@ function ConteudoHome() {
               </h3>
               <div className="flex items-center gap-3">
                 <a
-                  href={modalPdf.urlDownload}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href={`/api/relatorios/file?id=${modalPdf.id}&download=true`}
                   className="bg-[#49479D] hover:bg-[#3d3b85] text-white text-xs font-bold px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition"
                 >
                   <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -681,8 +676,10 @@ function ConteudoHome() {
                 </button>
               </div>
             </div>
+            
+            {/* O iframe carrega a rota de stream nativa do seu próprio backend */}
             <iframe 
-              src={modalPdf.urlVisualizacao} 
+              src={`/api/relatorios/file?id=${modalPdf.id}`} 
               className="w-full flex-1 border-none bg-slate-100" 
               title="Leitor de PDF" 
             />
