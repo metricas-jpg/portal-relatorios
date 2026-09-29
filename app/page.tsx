@@ -649,7 +649,7 @@ function ConteudoHome() {
         )}
       </main>
 
-      {/* Modal Leitor de PDF com Stream Interno Autenticado */}
+    {/* Modal Leitor de PDF com Stream Interno Autenticado e Ação de Tela Cheia */}
       {modalPdf && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-3 sm:p-6 backdrop-blur-sm">
           <div className="bg-white w-full max-w-6xl h-[92vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl border border-slate-700">
@@ -657,19 +657,39 @@ function ConteudoHome() {
               <h3 className="font-bold truncate text-sm max-w-xl">
                 {sanitizarTitulo(modalPdf.titulo, modalPdf.nome)}
               </h3>
-              <div className="flex items-center gap-3">
+              
+              <div className="flex items-center gap-2 sm:gap-3">
+                {/* Botão de Tela Cheia / Nova Aba Autenticada */}
+                <a
+                  href={`/api/relatorios/file?id=${modalPdf.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="border border-white/20 hover:bg-white/10 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition"
+                  title="Abrir em tela cheia numa nova aba"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  <span className="hidden sm:inline">Tela Cheia</span>
+                </a>
+
+                {/* Botão de Download */}
                 <a
                   href={`/api/relatorios/file?id=${modalPdf.id}&download=true`}
-                  className="bg-[#49479D] hover:bg-[#3d3b85] text-white text-xs font-bold px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition"
+                  className="bg-[#49479D] hover:bg-[#3d3b85] text-white text-xs font-bold px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition shadow-sm"
+                  title="Baixar arquivo PDF"
                 >
                   <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Baixar PDF
+                  <span className="hidden sm:inline">Baixar PDF</span>
+                  <span className="sm:hidden">Baixar</span>
                 </a>
+
+                {/* Botão Fechar */}
                 <button
                   onClick={() => setModalPdf(null)}
-                  className="text-slate-300 hover:text-white text-2xl font-bold leading-none p-1 transition"
+                  className="text-slate-300 hover:text-white text-2xl font-bold leading-none p-1 transition ml-1"
                   title="Fechar"
                 >
                   &times;
@@ -686,9 +706,6 @@ function ConteudoHome() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
 
 export default function Home() {
   return (
