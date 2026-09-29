@@ -14,6 +14,8 @@ interface Relatorio {
   titulo: string;
 }
 
+type TipoOrdenacao = 'data-desc' | 'data-asc' | 'nome-asc' | 'nome-desc';
+
 function ConteudoHome() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
@@ -24,6 +26,9 @@ function ConteudoHome() {
   const [erro, setErro] = useState('');
   const [busca, setBusca] = useState('');
   
+  // Ordenação
+  const [ordenacao, setOrdenacao] = useState<TipoOrdenacao>('data-desc');
+
   // Estados para o seletor de datas
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
@@ -64,7 +69,6 @@ function ConteudoHome() {
     }
   }, [status]);
 
-  // Aponta para a nova rota interna que busca a miniatura autenticada via Service Account
   const getThumbnailUrl = (id: string) => {
     if (id) {
       return `/api/relatorios/thumbnail?id=${id}`;
@@ -85,9 +89,10 @@ function ConteudoHome() {
     return limpa;
   };
 
-  const formatarParaBr = (isoStr: string) => {
-    if (!isoStr) return '';
-    const [ano, mes, dia] = isoStr.split('-');
+  const formatarParaBr = (str: string) => {
+    if (!str) return '';
+    if (str.includes('/')) return str;
+    const [ano, mes, dia] = str.split('-');
     return `${dia}/${mes}/${ano}`;
   };
 
@@ -200,6 +205,7 @@ function ConteudoHome() {
     );
   }
 
+  // 1. Filtragem por busca e período
   const relatoriosFiltrados = relatorios.filter((item) => {
     const termo = busca.toLowerCase();
     const matchTermo =
@@ -218,6 +224,27 @@ function ConteudoHome() {
     }
 
     return matchTermo && matchRange;
+  });
+
+  // 2. Ordenação dos relatórios
+  const relatoriosOrdenados = [...relatoriosFiltrados].sort((a, b) => {
+    const dataA = formatarParaIso(a.data);
+    const dataB = formatarParaIso(b.data);
+    const tituloA = (a.titulo || a.nome).toLowerCase();
+    const tituloB = (b.titulo || b.nome).toLowerCase();
+
+    switch (ordenacao) {
+      case 'data-desc':
+        return dataB.localeCompare(dataA);
+      case 'data-asc':
+        return dataA.localeCompare(dataB);
+      case 'nome-asc':
+        return tituloA.localeCompare(tituloB, 'pt-BR');
+      case 'nome-desc':
+        return tituloB.localeCompare(tituloA, 'pt-BR');
+      default:
+        return 0;
+    }
   });
 
   return (
@@ -280,7 +307,7 @@ function ConteudoHome() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         
         {/* Barra de Filtros com Seletor Dropdown */}
-        <div className="bg-white rounded-2xl p-2.5 shadow-sm border border-slate-200/90 flex flex-col md:flex-row items-center gap-3 mb-8 relative">
+        <div className="bg-white rounded-2xl p-2.5 shadow-sm border border-slate-200/90 flex flex-col md:flex-row items-center gap-3 mb-6 relative">
           
           <div className="relative flex-1 w-full">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -423,6 +450,35 @@ function ConteudoHome() {
           )}
         </div>
 
+        {/* Linha de Status: Contador de Relatórios e Seletor de Ordenação */}
+        {!loading && !erro && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 px-1">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#00AE9D] animate-pulse"></span>
+              <p className="text-sm font-semibold text-[#003641]">
+                <strong className="text-base font-bold text-[#003641]">{relatoriosOrdenados.length}</strong> relatórios de Monitoramento de Crises ativos.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label htmlFor="ordenacao" className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                Ordenar por:
+              </label>
+              <select
+                id="ordenacao"
+                value={ordenacao}
+                onChange={(e) => setOrdenacao(e.target.value as TipoOrdenacao)}
+                className="bg-white border border-slate-200 text-xs font-medium text-[#003641] rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#00AE9D] shadow-sm cursor-pointer"
+              >
+                <option value="data-desc">Data: Mais recentes</option>
+                <option value="data-asc">Data: Mais antigos</option>
+                <option value="nome-asc">Título: A → Z</option>
+                <option value="nome-desc">Título: Z → A</option>
+              </select>
+            </div>
+          </div>
+        )}
+
         {/* Estados de Carregamento e Erro */}
         {loading && (
           <div className="text-center py-20 text-slate-500 text-sm flex flex-col items-center gap-3">
@@ -440,12 +496,12 @@ function ConteudoHome() {
         {/* Grade de Cards com Thumbnail e Placeholder de Fundo */}
         {!loading && !erro && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {relatoriosFiltrados.length === 0 ? (
+            {relatoriosOrdenados.length === 0 ? (
               <div className="col-span-full text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300 p-8">
-                <p className="text-slate-400 font-medium">Nenhum relatório encontrado para o período ou termos informados.</p>
+                <p className="text-slate-400 font-medium">Nenhum relatório encontrado para os filtros selecionados.</p>
               </div>
             ) : (
-              relatoriosFiltrados.map((rel) => (
+              relatoriosOrdenados.map((rel) => (
                 <div 
                   key={rel.id} 
                   className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col group"
@@ -455,7 +511,7 @@ function ConteudoHome() {
                     onClick={() => setModalPdf(rel)}
                     className="relative w-full h-48 bg-slate-100 overflow-hidden cursor-pointer border-b border-slate-100 flex items-center justify-center group-hover:opacity-95 transition"
                   >
-                    {/* Placeholder: ícone e texto exibidos caso a imagem demore ou falhe */}
+                    {/* Placeholder no fundo */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 pointer-events-none select-none">
                       <svg className="w-12 h-12 mb-1.5 text-slate-300 group-hover:text-[#00AE9D] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -463,7 +519,7 @@ function ConteudoHome() {
                       <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">Relatório PDF</span>
                     </div>
 
-                    {/* Imagem real servida pela rota interna /api/relatorios/thumbnail */}
+                    {/* Imagem autenticada */}
                     <img
                       src={getThumbnailUrl(rel.id)}
                       alt={`Capa de ${rel.titulo || rel.nome}`}
@@ -473,7 +529,7 @@ function ConteudoHome() {
                       }}
                     />
 
-                    {/* Efeito Hover com indicação de clique */}
+                    {/* Efeito Hover */}
                     <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
                       <span className="text-white text-xs font-medium bg-[#003641]/80 px-2.5 py-1 rounded-md backdrop-blur-sm">
                         Clique para expandir ↗
@@ -485,7 +541,7 @@ function ConteudoHome() {
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="text-xs font-bold text-[#00AE9D] bg-[#00AE9D]/10 px-2.5 py-0.5 rounded-full">
-                          📅 {rel.data || 'Sem data'}
+                          📅 {formatarParaBr(rel.data) || 'Sem data'}
                         </span>
                       </div>
                       
