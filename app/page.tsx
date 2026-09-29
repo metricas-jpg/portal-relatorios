@@ -96,6 +96,15 @@ function ConteudoHome() {
     return `${dia}/${mes}/${ano}`;
   };
 
+  // Limpa extensões técnicas e sufixos desnecessários do título
+  const sanitizarTitulo = (titulo: string, nomeArquivo: string) => {
+    let t = titulo || nomeArquivo || '';
+    t = t.replace(/\.(pptx|pdf|docx|xlsx)$/i, '');
+    t = t.replace(/^\d{2}\.\d{2}\.\d{4}_?/, '');
+    t = t.replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+    return t;
+  };
+
   const getLabelData = () => {
     if (dataInicio && dataFim) {
       return `${formatarParaBr(dataInicio)} – ${formatarParaBr(dataFim)}`;
@@ -208,8 +217,9 @@ function ConteudoHome() {
   // 1. Filtragem por busca e período
   const relatoriosFiltrados = relatorios.filter((item) => {
     const termo = busca.toLowerCase();
+    const tituloLimpo = sanitizarTitulo(item.titulo, item.nome).toLowerCase();
     const matchTermo =
-      item.titulo.toLowerCase().includes(termo) ||
+      tituloLimpo.includes(termo) ||
       item.nome.toLowerCase().includes(termo) ||
       item.id.toLowerCase().includes(termo);
 
@@ -230,8 +240,8 @@ function ConteudoHome() {
   const relatoriosOrdenados = [...relatoriosFiltrados].sort((a, b) => {
     const dataA = formatarParaIso(a.data);
     const dataB = formatarParaIso(b.data);
-    const tituloA = (a.titulo || a.nome).toLowerCase();
-    const tituloB = (b.titulo || b.nome).toLowerCase();
+    const tituloA = sanitizarTitulo(a.titulo, a.nome).toLowerCase();
+    const tituloB = sanitizarTitulo(b.titulo, b.nome).toLowerCase();
 
     switch (ordenacao) {
       case 'data-desc':
@@ -246,6 +256,8 @@ function ConteudoHome() {
         return 0;
     }
   });
+
+  const temFiltroAtivo = Boolean(busca || dataInicio || dataFim);
 
   return (
     <div className="min-h-screen bg-[#f4f7f8] text-[#003641]">
@@ -306,26 +318,28 @@ function ConteudoHome() {
       {/* Conteúdo Principal */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         
-        {/* Barra de Filtros com Seletor Dropdown */}
-        <div className="bg-white rounded-2xl p-2.5 shadow-sm border border-slate-200/90 flex flex-col md:flex-row items-center gap-3 mb-6 relative">
+        {/* Command Bar Unificada (Busca + Filtro de Data + Ordenação) */}
+        <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-200/90 flex flex-col md:flex-row items-center gap-2 mb-3">
           
+          {/* Campo de Pesquisa */}
           <div className="relative flex-1 w-full">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
             <input
               type="text"
-              placeholder="Pesquisar por título, palavra-chave ou código..."
+              placeholder="Pesquisar por título ou palavra-chave..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="w-full pl-11 pr-4 py-2 text-sm text-[#003641] bg-transparent focus:outline-none placeholder-slate-400 font-medium"
+              className="w-full pl-10 pr-3 py-2 text-xs md:text-sm text-[#003641] bg-transparent focus:outline-none placeholder-slate-400 font-medium"
             />
           </div>
 
-          <div className="h-7 w-px bg-slate-200 hidden md:block"></div>
+          <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
 
+          {/* Seletor de Data */}
           <div className="relative w-full md:w-auto" ref={dropdownRef}>
             <button
               onClick={() => {
@@ -333,19 +347,19 @@ function ConteudoHome() {
                 setTempFim(dataFim);
                 setDropdownAberto(!dropdownAberto);
               }}
-              className={`w-full md:w-auto flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold border transition ${
+              className={`w-full md:w-auto flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-xs font-medium border transition ${
                 dataInicio || dataFim
-                  ? 'border-[#00AE9D] bg-[#00AE9D]/10 text-[#003641]'
+                  ? 'border-[#00AE9D] bg-[#00AE9D]/10 text-[#003641] font-semibold'
                   : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
               }`}
             >
               <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-[#003641]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <span>{getLabelData()}</span>
               </div>
-              <svg className={`w-3.5 h-3.5 transition-transform ${dropdownAberto ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-3.5 h-3.5 transition-transform text-slate-400 ${dropdownAberto ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
@@ -434,7 +448,27 @@ function ConteudoHome() {
             )}
           </div>
 
-          {(busca || dataInicio || dataFim) && (
+          <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
+
+          {/* Seletor de Ordenação Integrado */}
+          <div className="flex items-center gap-1.5 w-full md:w-auto px-2">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider hidden lg:inline">
+              Ordem:
+            </span>
+            <select
+              value={ordenacao}
+              onChange={(e) => setOrdenacao(e.target.value as TipoOrdenacao)}
+              className="w-full md:w-auto bg-slate-50 md:bg-transparent border md:border-none border-slate-200 rounded-xl md:rounded-none px-2.5 py-2 text-xs font-semibold text-[#003641] focus:outline-none cursor-pointer"
+            >
+              <option value="data-desc">Data: Mais recentes</option>
+              <option value="data-asc">Data: Mais antigos</option>
+              <option value="nome-asc">Título: A → Z</option>
+              <option value="nome-desc">Título: Z → A</option>
+            </select>
+          </div>
+
+          {/* Botão Limpar Filtros */}
+          {temFiltroAtivo && (
             <button
               onClick={() => {
                 setBusca('');
@@ -443,39 +477,29 @@ function ConteudoHome() {
                 setTempInicio('');
                 setTempFim('');
               }}
-              className="text-xs font-semibold text-slate-500 hover:text-[#C24153] px-3 py-2 rounded-xl transition whitespace-nowrap"
+              className="text-xs font-semibold text-slate-400 hover:text-[#C24153] px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+              title="Limpar todos os filtros"
             >
               Limpar
             </button>
           )}
         </div>
 
-        {/* Linha de Status: Contador de Relatórios e Seletor de Ordenação */}
+        {/* Linha de Metadado Silenciosa (Contador Tufte Style) */}
         {!loading && !erro && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 px-1">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#00AE9D] animate-pulse"></span>
-              <p className="text-sm font-semibold text-[#003641]">
-                <strong className="text-base font-bold text-[#003641]">{relatoriosOrdenados.length}</strong> relatórios de Monitoramento de Crises ativos.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label htmlFor="ordenacao" className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                Ordenar por:
-              </label>
-              <select
-                id="ordenacao"
-                value={ordenacao}
-                onChange={(e) => setOrdenacao(e.target.value as TipoOrdenacao)}
-                className="bg-white border border-slate-200 text-xs font-medium text-[#003641] rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#00AE9D] shadow-sm cursor-pointer"
-              >
-                <option value="data-desc">Data: Mais recentes</option>
-                <option value="data-asc">Data: Mais antigos</option>
-                <option value="nome-asc">Título: A → Z</option>
-                <option value="nome-desc">Título: Z → A</option>
-              </select>
-            </div>
+          <div className="flex items-center justify-between px-2 mb-6 text-xs text-slate-500">
+            <p>
+              {temFiltroAtivo ? (
+                <>
+                  Exibindo <span className="font-bold text-[#003641]">{relatoriosOrdenados.length}</span> de <span className="font-medium text-slate-700">{relatorios.length}</span> relatórios ativos
+                  {busca && <span> para &ldquo;{busca}&rdquo;</span>}
+                </>
+              ) : (
+                <>
+                  <span className="font-bold text-[#003641]">{relatoriosOrdenados.length}</span> relatórios de Monitoramento de Crises ativos
+                </>
+              )}
+            </p>
           </div>
         )}
 
@@ -493,7 +517,7 @@ function ConteudoHome() {
           </div>
         )}
 
-        {/* Grade de Cards com Thumbnail e Placeholder de Fundo */}
+        {/* Grade de Cards com Thumbnail e Ações Rebalanceadas */}
         {!loading && !erro && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {relatoriosOrdenados.length === 0 ? (
@@ -501,78 +525,84 @@ function ConteudoHome() {
                 <p className="text-slate-400 font-medium">Nenhum relatório encontrado para os filtros selecionados.</p>
               </div>
             ) : (
-              relatoriosOrdenados.map((rel) => (
-                <div 
-                  key={rel.id} 
-                  className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col group"
-                >
-                  {/* Container da Capa com Placeholder Visual */}
+              relatoriosOrdenados.map((rel) => {
+                const tituloExibicao = sanitizarTitulo(rel.titulo, rel.nome);
+
+                return (
                   <div 
-                    onClick={() => setModalPdf(rel)}
-                    className="relative w-full h-48 bg-slate-100 overflow-hidden cursor-pointer border-b border-slate-100 flex items-center justify-center group-hover:opacity-95 transition"
+                    key={rel.id} 
+                    className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col group"
                   >
-                    {/* Placeholder no fundo */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 pointer-events-none select-none">
-                      <svg className="w-12 h-12 mb-1.5 text-slate-300 group-hover:text-[#00AE9D] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                      <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">Relatório PDF</span>
-                    </div>
+                    {/* Container da Capa com Linha Divisória de 1px e Placeholder */}
+                    <div 
+                      onClick={() => setModalPdf(rel)}
+                      className="relative w-full h-48 bg-slate-100 overflow-hidden cursor-pointer border-b border-slate-200/80 flex items-center justify-center group-hover:opacity-95 transition"
+                    >
+                      {/* Placeholder de fundo */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 pointer-events-none select-none">
+                        <svg className="w-12 h-12 mb-1.5 text-slate-300 group-hover:text-[#00AE9D] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-[11px] font-bold tracking-wider uppercase text-slate-400">Relatório PDF</span>
+                      </div>
 
-                    {/* Imagem autenticada */}
-                    <img
-                      src={getThumbnailUrl(rel.id)}
-                      alt={`Capa de ${rel.titulo || rel.nome}`}
-                      className="w-full h-full object-cover object-top relative z-10"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
+                      {/* Imagem autenticada */}
+                      <img
+                        src={getThumbnailUrl(rel.id)}
+                        alt={`Capa de ${tituloExibicao}`}
+                        className="w-full h-full object-cover object-top relative z-10"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
 
-                    {/* Efeito Hover */}
-                    <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                      <span className="text-white text-xs font-medium bg-[#003641]/80 px-2.5 py-1 rounded-md backdrop-blur-sm">
-                        Clique para expandir ↗
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-5 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-xs font-bold text-[#00AE9D] bg-[#00AE9D]/10 px-2.5 py-0.5 rounded-full">
-                          📅 {formatarParaBr(rel.data) || 'Sem data'}
+                      {/* Efeito Hover */}
+                      <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                        <span className="text-white text-xs font-medium bg-[#003641]/80 px-2.5 py-1 rounded-md backdrop-blur-sm">
+                          Clique para expandir ↗
                         </span>
                       </div>
-                      
-                      <h2 className="font-bold text-[#003641] text-base mb-1.5 line-clamp-2 leading-snug group-hover:text-[#49479D] transition-colors">
-                        {rel.titulo || rel.nome}
-                      </h2>
-                      <p className="text-xs text-slate-400 font-mono truncate mb-4">
-                        {rel.nome}
-                      </p>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100 flex gap-2">
-                      <button
-                        onClick={() => setModalPdf(rel)}
-                        className="flex-1 bg-[#003641] hover:bg-[#00262e] text-white text-xs font-semibold py-2.5 px-3 rounded-xl text-center transition shadow-sm"
-                      >
-                        Ler na Tela
-                      </button>
-                      <a
-                        href={rel.urlDownload}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-[#49479D] hover:bg-[#3d3b85] text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 transition shadow-sm"
-                        title="Download do PDF"
-                      >
-                        ⬇ Baixar
-                      </a>
+                    {/* Informações do Card */}
+                    <div className="p-5 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-2.5">
+                          <span className="text-[11px] font-bold text-[#00AE9D] bg-[#00AE9D]/10 px-2.5 py-0.5 rounded-full">
+                            📅 {formatarParaBr(rel.data) || 'Sem data'}
+                          </span>
+                        </div>
+                        
+                        <h2 className="font-bold text-[#003641] text-base mb-3 line-clamp-2 leading-snug group-hover:text-[#49479D] transition-colors">
+                          {tituloExibicao}
+                        </h2>
+                      </div>
+
+                      {/* Ações: Primária em Destaque + Secundária Neutra */}
+                      <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
+                        <button
+                          onClick={() => setModalPdf(rel)}
+                          className="flex-1 bg-[#003641] hover:bg-[#00262e] text-white text-xs font-semibold py-2.5 px-3 rounded-xl text-center transition shadow-sm"
+                        >
+                          Ler na Tela
+                        </button>
+                        <a
+                          href={rel.urlDownload}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2.5 rounded-xl flex items-center gap-1.5 transition"
+                          title="Download direto do PDF"
+                        >
+                          <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          <span>Baixar</span>
+                        </a>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
@@ -584,7 +614,7 @@ function ConteudoHome() {
           <div className="bg-white w-full max-w-6xl h-[92vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl border border-slate-700">
             <div className="flex justify-between items-center bg-[#003641] px-6 py-3.5 text-white">
               <h3 className="font-bold truncate text-sm max-w-xl">
-                {modalPdf.titulo || modalPdf.nome}
+                {sanitizarTitulo(modalPdf.titulo, modalPdf.nome)}
               </h3>
               <div className="flex items-center gap-3">
                 <a
@@ -593,7 +623,10 @@ function ConteudoHome() {
                   rel="noopener noreferrer"
                   className="bg-[#49479D] hover:bg-[#3d3b85] text-white text-xs font-bold px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition"
                 >
-                  ⬇ Baixar PDF
+                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Baixar PDF
                 </a>
                 <button
                   onClick={() => setModalPdf(null)}
