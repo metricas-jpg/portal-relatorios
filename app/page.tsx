@@ -449,7 +449,7 @@ function ConteudoHome() {
 
           <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
 
-          {/* Seletor de Ordenação com Affordance Iconográfica */}
+          {/* Seletor de Ordenação */}
           <div className="relative flex items-center bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 transition group focus-within:ring-2 focus-within:ring-[#00AE9D] focus-within:border-transparent w-full md:w-auto">
             <svg 
               className="w-4 h-4 text-slate-500 group-hover:text-[#003641] transition-colors shrink-0" 
@@ -500,7 +500,7 @@ function ConteudoHome() {
           )}
         </div>
 
-        {/* Linha de Metadado Silenciosa */}
+        {/* Linha de Metadado com Capitalização Uniforme (Sentence case) */}
         {!loading && !erro && (
           <div className="flex items-center justify-between px-2 mb-6 text-xs text-slate-500">
             <p>
@@ -511,7 +511,7 @@ function ConteudoHome() {
                 </>
               ) : (
                 <>
-                  <span className="font-bold text-[#003641]">{relatoriosOrdenados.length}</span> relatórios de Monitoramento de Crises ativos
+                  <span className="font-bold text-[#003641]">{relatoriosOrdenados.length}</span> relatórios de monitoramento de crises ativos
                 </>
               )}
             </p>
@@ -532,7 +532,7 @@ function ConteudoHome() {
           </div>
         )}
 
-        {/* Grade de Cards com Thumbnail e Ações Rebalanceadas */}
+        {/* Grade de Cards Harmonizada */}
         {!loading && !erro && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {relatoriosOrdenados.length === 0 ? (
@@ -576,22 +576,25 @@ function ConteudoHome() {
                       </div>
                     </div>
 
-                    {/* Informações do Card */}
+                    {/* Informações do Card com Altura e Espaçamento Estabilizados */}
                     <div className="p-5 flex-1 flex flex-col justify-between">
                       <div>
-                        <div className="flex items-center justify-between gap-2 mb-2.5">
-                          <span className="text-[11px] font-bold text-[#00AE9D] bg-[#00AE9D]/10 px-2.5 py-0.5 rounded-full">
-                            📅 {formatarParaBr(rel.data) || 'Sem data'}
+                        {/* Pílula de Data com Alto Contraste (Itten & WCAG) */}
+                        <div className="flex items-center gap-2 mb-2.5">
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#003641] bg-[#00AE9D]/15 border border-[#00AE9D]/25 px-2.5 py-0.5 rounded-md">
+                            <span>📅</span>
+                            <span>{formatarParaBr(rel.data) || 'Sem data'}</span>
                           </span>
                         </div>
                         
-                        <h2 className="font-bold text-[#003641] text-base mb-3 line-clamp-2 leading-snug group-hover:text-[#49479D] transition-colors">
+                        {/* Título com altura mínima para 2 linhas (equilibra todos os cards) */}
+                        <h2 className="font-bold text-[#003641] text-base mb-1 line-clamp-2 leading-snug min-h-[2.6rem] flex items-center group-hover:text-[#49479D] transition-colors">
                           {tituloExibicao}
                         </h2>
                       </div>
 
                       {/* Ações */}
-                      <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
+                      <div className="pt-3 mt-2 border-t border-slate-100 flex items-center gap-2">
                         <button
                           onClick={() => setModalPdf(rel)}
                           className="flex-1 bg-[#003641] hover:bg-[#00262e] text-white text-xs font-semibold py-2.5 px-3 rounded-xl text-center transition shadow-sm"
