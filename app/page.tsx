@@ -187,7 +187,7 @@ function ConteudoHome() {
             Central de Relatórios
           </h1>
           <p className="text-slate-300 text-sm mb-8 leading-relaxed">
-            Consulte e pesquise os relatórios de monitoramento de crise ativos.
+            Consulte os relatórios de monitoramento de crise ativos
           </p>
 
           {erroUrl === 'AcessoNegado' && (
