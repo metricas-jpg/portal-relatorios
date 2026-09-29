@@ -15,6 +15,7 @@ interface Relatorio {
 }
 
 type TipoOrdenacao = 'data-desc' | 'data-asc' | 'nome-asc' | 'nome-desc';
+type TipoPreset = 'esteAno' | 'esteMes' | 'ultimos30' | 'tudo' | null;
 
 function ConteudoHome() {
   const { data: session, status } = useSession();
@@ -26,20 +27,22 @@ function ConteudoHome() {
   const [erro, setErro] = useState('');
   const [busca, setBusca] = useState('');
   
-  // Ordenação com valor padrão: mais recentes primeiro
+  // Ordenação
   const [ordenacao, setOrdenacao] = useState<TipoOrdenacao>('data-desc');
 
-  // Estados para o seletor de datas
+  // Estados de Datas e Presets
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [tempInicio, setTempInicio] = useState('');
   const [tempFim, setTempFim] = useState('');
+  const [presetAtivo, setPresetAtivo] = useState<TipoPreset>(null);
+  const [tempPreset, setTempPreset] = useState<TipoPreset>(null);
+  
   const [dropdownAberto, setDropdownAberto] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [modalPdf, setModalPdf] = useState<Relatorio | null>(null);
 
-  // Fecha o dropdown ao clicar fora
   useEffect(() => {
     function handleClickFora(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -105,6 +108,11 @@ function ConteudoHome() {
   };
 
   const getLabelData = () => {
+    if (presetAtivo === 'esteAno') return 'Este ano';
+    if (presetAtivo === 'esteMes') return 'Este mês';
+    if (presetAtivo === 'ultimos30') return 'Últimos 30 dias';
+    if (presetAtivo === 'tudo' || (!dataInicio && !dataFim)) return 'Todo o período';
+
     if (dataInicio && dataFim) {
       return `${formatarParaBr(dataInicio)} – ${formatarParaBr(dataFim)}`;
     }
@@ -117,37 +125,48 @@ function ConteudoHome() {
     return 'Todo o período';
   };
 
-  const aplicarFiltroData = () => {
+  const aplicarFiltroManual = () => {
     setDataInicio(tempInicio);
     setDataFim(tempFim);
+    setPresetAtivo(tempPreset);
     setDropdownAberto(false);
   };
 
-  const aplicarPredefinido = (tipo: 'esteAno' | 'esteMes' | 'ultimos30' | 'tudo') => {
+  const aplicarPredefinido = (tipo: TipoPreset) => {
     const hoje = new Date();
     const anoAtual = hoje.getFullYear();
     const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
     const diaAtual = String(hoje.getDate()).padStart(2, '0');
 
+    let inicio = '';
+    let fim = '';
+
     if (tipo === 'esteAno') {
-      setTempInicio(`${anoAtual}-01-01`);
-      setTempFim(`${anoAtual}-12-31`);
+      inicio = `${anoAtual}-01-01`;
+      fim = `${anoAtual}-12-31`;
     } else if (tipo === 'esteMes') {
       const ultimoDiaMes = new Date(anoAtual, hoje.getMonth() + 1, 0).getDate();
-      setTempInicio(`${anoAtual}-${mesAtual}-01`);
-      setTempFim(`${anoAtual}-${mesAtual}-${ultimoDiaMes}`);
+      inicio = `${anoAtual}-${mesAtual}-01`;
+      fim = `${anoAtual}-${mesAtual}-${ultimoDiaMes}`;
     } else if (tipo === 'ultimos30') {
       const dataPassada = new Date();
       dataPassada.setDate(hoje.getDate() - 30);
       const anoP = dataPassada.getFullYear();
       const mesP = String(dataPassada.getMonth() + 1).padStart(2, '0');
       const diaP = String(dataPassada.getDate()).padStart(2, '0');
-      setTempInicio(`${anoP}-${mesP}-${diaP}`);
-      setTempFim(`${anoAtual}-${mesAtual}-${diaAtual}`);
-    } else if (tipo === 'tudo') {
-      setTempInicio('');
-      setTempFim('');
+      inicio = `${anoP}-${mesP}-${diaP}`;
+      fim = `${anoAtual}-${mesAtual}-${diaAtual}`;
     }
+
+    setTempInicio(inicio);
+    setTempFim(fim);
+    setTempPreset(tipo);
+
+    // Aplicação imediata para agilizar o fluxo do usuário (Krug)
+    setDataInicio(inicio);
+    setDataFim(fim);
+    setPresetAtivo(tipo);
+    setDropdownAberto(false);
   };
 
   if (status === 'loading') {
@@ -187,7 +206,7 @@ function ConteudoHome() {
             Central de Relatórios
           </h1>
           <p className="text-slate-300 text-sm mb-8 leading-relaxed">
-            Consulte os relatórios de monitoramento de crise ativos
+            Consulte e pesquise os relatórios de monitoramento de crise ativos.
           </p>
 
           {erroUrl === 'AcessoNegado' && (
@@ -256,7 +275,7 @@ function ConteudoHome() {
     }
   });
 
-  const temFiltroAtivo = Boolean(busca || dataInicio || dataFim);
+  const temFiltroAtivo = Boolean(busca || dataInicio || dataFim || (presetAtivo && presetAtivo !== 'tudo'));
 
   return (
     <div className="min-h-screen bg-[#f4f7f8] text-[#003641]">
@@ -344,10 +363,11 @@ function ConteudoHome() {
               onClick={() => {
                 setTempInicio(dataInicio);
                 setTempFim(dataFim);
+                setTempPreset(presetAtivo);
                 setDropdownAberto(!dropdownAberto);
               }}
               className={`w-full md:w-auto flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-xs font-medium border transition ${
-                dataInicio || dataFim
+                dataInicio || dataFim || (presetAtivo && presetAtivo !== 'tudo')
                   ? 'border-[#00AE9D] bg-[#00AE9D]/10 text-[#003641] font-semibold'
                   : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
               }`}
@@ -365,68 +385,75 @@ function ConteudoHome() {
 
             {dropdownAberto && (
               <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 p-5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="mb-4 pb-3 border-b border-slate-100">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                    Predefinições
-                  </span>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => aplicarPredefinido('esteAno')}
-                      className="text-left text-xs px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 transition"
-                    >
-                      Este ano
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => aplicarPredefinido('esteMes')}
-                      className="text-left text-xs px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 transition"
-                    >
-                      Este mês
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => aplicarPredefinido('ultimos30')}
-                      className="text-left text-xs px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 transition"
-                    >
-                      Últimos 30 dias
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => aplicarPredefinido('tudo')}
-                      className="text-left text-xs px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 transition"
-                    >
-                      Todo o período
-                    </button>
-                  </div>
-                </div>
-
+                
+                {/* 1. SEÇÃO DE DATAS NO TOPO */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
                   <div>
-                    <label className="block text-[11px] font-bold text-[#003641] uppercase tracking-wider mb-1.5">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                       Data de início
                     </label>
                     <input
                       type="date"
                       value={tempInicio}
-                      onChange={(e) => setTempInicio(e.target.value)}
+                      onChange={(e) => {
+                        setTempInicio(e.target.value);
+                        setTempPreset(null); // Desmarca o preset ao digitar manualmente (Norman)
+                      }}
                       className="w-full text-xs text-[#003641] border border-slate-200 bg-slate-50 rounded-xl px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-[#00AE9D]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-[#003641] uppercase tracking-wider mb-1.5">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                       Data de término
                     </label>
                     <input
                       type="date"
                       value={tempFim}
-                      onChange={(e) => setTempFim(e.target.value)}
+                      onChange={(e) => {
+                        setTempFim(e.target.value);
+                        setTempPreset(null);
+                      }}
                       className="w-full text-xs text-[#003641] border border-slate-200 bg-slate-50 rounded-xl px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-[#00AE9D]"
                     />
                   </div>
                 </div>
 
+                {/* 2. SEÇÃO DE PREDEFINIÇÕES COM FEEDBACK DE SELEÇÃO */}
+                <div className="pt-4 border-t border-slate-100 mb-5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2.5">
+                    Predefinições
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'esteAno', label: 'Este ano' },
+                      { id: 'esteMes', label: 'Este mês' },
+                      { id: 'ultimos30', label: 'Últimos 30 dias' },
+                      { id: 'tudo', label: 'Todo o período' },
+                    ].map((item) => {
+                      const isSelecionado = tempPreset === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => aplicarPredefinido(item.id as TipoPreset)}
+                          className={`flex items-center justify-between text-xs px-3 py-2 rounded-xl transition border text-left font-medium ${
+                            isSelecionado
+                              ? 'bg-[#003641]/10 border-[#00AE9D] text-[#003641] font-bold shadow-inner'
+                              : 'bg-slate-50/60 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span>{item.label}</span>
+                          {isSelecionado && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#00AE9D]"></span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. AÇÕES DE CONFIRMAÇÃO MANUAL */}
                 <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                   <button
                     type="button"
@@ -437,7 +464,7 @@ function ConteudoHome() {
                   </button>
                   <button
                     type="button"
-                    onClick={aplicarFiltroData}
+                    onClick={aplicarFiltroManual}
                     className="text-xs font-bold text-white bg-[#003641] hover:bg-[#00262e] px-4 py-2 rounded-xl transition shadow-sm"
                   >
                     Aplicar
@@ -491,6 +518,8 @@ function ConteudoHome() {
                 setDataFim('');
                 setTempInicio('');
                 setTempFim('');
+                setPresetAtivo(null);
+                setTempPreset(null);
               }}
               className="text-xs font-semibold text-slate-400 hover:text-[#C24153] px-3 py-1.5 rounded-lg transition whitespace-nowrap"
               title="Limpar todos os filtros"
@@ -500,7 +529,7 @@ function ConteudoHome() {
           )}
         </div>
 
-        {/* Linha de Metadado com Capitalização Uniforme (Sentence case) */}
+        {/* Linha de Metadado */}
         {!loading && !erro && (
           <div className="flex items-center justify-between px-2 mb-6 text-xs text-slate-500">
             <p>
@@ -576,10 +605,10 @@ function ConteudoHome() {
                       </div>
                     </div>
 
-                    {/* Informações do Card com Altura e Espaçamento Estabilizados */}
+                    {/* Informações do Card com Altura e Espaçamento Calibrados */}
                     <div className="p-5 flex-1 flex flex-col justify-between">
                       <div>
-                        {/* Pílula de Data com Alto Contraste (Itten & WCAG) */}
+                        {/* Pílula de Data com Alto Contraste */}
                         <div className="flex items-center gap-2 mb-2.5">
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#003641] bg-[#00AE9D]/15 border border-[#00AE9D]/25 px-2.5 py-0.5 rounded-md">
                             <span>📅</span>
@@ -587,7 +616,7 @@ function ConteudoHome() {
                           </span>
                         </div>
                         
-                        {/* Título com altura mínima para 2 linhas (equilibra todos os cards) */}
+                        {/* Título com Altura Mínima Reservada */}
                         <h2 className="font-bold text-[#003641] text-base mb-1 line-clamp-2 leading-snug min-h-[2.6rem] flex items-center group-hover:text-[#49479D] transition-colors">
                           {tituloExibicao}
                         </h2>
