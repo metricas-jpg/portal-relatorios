@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -14,7 +14,7 @@ interface Relatorio {
   titulo: string;
 }
 
-export default function Home() {
+function ConteudoHome() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const erroUrl = searchParams.get('erro');
@@ -90,7 +90,6 @@ export default function Home() {
     return `${dia}/${mes}/${ano}`;
   };
 
-  // Texto do botão indicador estilo Looker Studio
   const getLabelData = () => {
     if (dataInicio && dataFim) {
       return `${formatarParaBr(dataInicio)} – ${formatarParaBr(dataFim)}`;
@@ -279,10 +278,9 @@ export default function Home() {
       {/* Conteúdo Principal */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         
-        {/* Barra de Filtros com Seletor Dropdown Estilo Looker Studio */}
+        {/* Barra de Filtros com Seletor Dropdown */}
         <div className="bg-white rounded-2xl p-2.5 shadow-sm border border-slate-200/90 flex flex-col md:flex-row items-center gap-3 mb-8 relative">
           
-          {/* Campo de Busca por Texto */}
           <div className="relative flex-1 w-full">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,7 +298,6 @@ export default function Home() {
 
           <div className="h-7 w-px bg-slate-200 hidden md:block"></div>
 
-          {/* Botão Único Discreto de Data com Dropdown */}
           <div className="relative w-full md:w-auto" ref={dropdownRef}>
             <button
               onClick={() => {
@@ -325,10 +322,8 @@ export default function Home() {
               </svg>
             </button>
 
-            {/* Menu Popover Flutuante (Estilo Looker Studio) */}
             {dropdownAberto && (
               <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 p-5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                {/* Atalhos Rápidos */}
                 <div className="mb-4 pb-3 border-b border-slate-100">
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
                     Predefinições
@@ -365,7 +360,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Seletores de Data de Início e Término */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
                   <div>
                     <label className="block text-[11px] font-bold text-[#003641] uppercase tracking-wider mb-1.5">
@@ -392,7 +386,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Ações do Dropdown: Cancelar e Aplicar */}
                 <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                   <button
                     type="button"
@@ -413,7 +406,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Botão de Limpeza Geral */}
           {(busca || dataInicio || dataFim) && (
             <button
               onClick={() => {
@@ -552,5 +544,20 @@ export default function Home() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#003641] text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-[#00AE9D] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm font-medium tracking-wide">Carregando aplicação...</p>
+        </div>
+      </div>
+    }>
+      <ConteudoHome />
+    </Suspense>
   );
 }
