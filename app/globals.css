@@ -1,94 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* =========================================================================
-   ESTILOS DO GERADOR DE PDF (Layout A4)
-   Estão isolados dentro da classe ".doc" para NÃO QUEBRAR o Portal Principal
-   ========================================================================= */
-
-.doc { 
-  /* Variáveis do Relatório */
-  --petroleo: #003641; --turquesa: #00AE9D; --lima: #C9D200; --roxo: #49479D;
-  --verde: #7DB61C; --laranja: #D9962B; --vermelho: #B23A3A; --verde-escuro: #4E8A12;
-  --texto: #1E2B30; --cinza: #5B6B70; --cinza-claro: #A9B5B9; --cinza-tom: #6B7A80;
-  --neutra: #7F8F95; --aclass: #C3CDD0; --linha: #D5DDE0;
-  --card: #EEF2F3; --zebra: #F6F8F9; --amarelo: #F4F7CC; --oliva: #5E6300; --area-print: #FAFBFB;
-  --font: "Arimo", "Liberation Sans", Arial, Helvetica, sans-serif;
-  --W: 595.45pt; --H: 841.69pt;
-
-  /* Reseta apenas a página do Gerador */
-  font-family: var(--font); 
-  color: var(--texto); 
-  -webkit-font-smoothing: antialiased; 
-  background: #E4E9EB; 
-  min-height: 100vh;
-  margin: 0; 
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
-  gap: 24px; 
-  padding: 24px 16px;
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
-/* Tudo abaixo afeta APENAS o interior da classe .doc */
-.doc .page { position: relative; width: var(--W); height: var(--H); background: #fff; overflow: hidden; box-shadow: 0 2px 12px rgba(0,40,50,.18); flex: none; }
-.doc .page > * { position: absolute; }
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
 
-/* ---------- texto posicionado pela linha de base ---------- */
-.doc .t { position: absolute; white-space: pre; font-size: var(--fs); line-height: var(--lh); --lh: calc(var(--fs) * 1.2); top: calc(var(--b) + var(--dy, 0pt) - var(--fs) * .9053 - (var(--lh) - var(--fs) * 1.1172) / 2); }
-.doc .t.wrap { white-space: pre-wrap; }
-.doc .t.r { text-align: right; }
-.doc .t.c { text-align: center; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
 
-/* Tipografia */
-.doc .z65{--fs:6.5pt} .doc .z7{--fs:7pt} .doc .z75{--fs:7.5pt} .doc .z8{--fs:8pt} .doc .z85{--fs:8.5pt} .doc .z9{--fs:9pt}
-.doc .z95{--fs:9.5pt} .doc .z10{--fs:10pt} .doc .z11{--fs:11pt} .doc .z12{--fs:12pt} .doc .z13{--fs:13pt} .doc .z15{--fs:15pt}
-.doc .z19{--fs:19pt} .doc .z24{--fs:24pt} .doc .z26{--fs:26pt}
-.doc .b { font-weight: 700; } .doc .i { font-style: italic; }
-.doc .sp { letter-spacing: .54pt; }
-.doc .lh119{--lh:11.9pt} .doc .lh145{--lh:14.5pt} .doc .lh189{--lh:18.9pt}
-
-/* Cores */
-.doc .c-branco{color:#fff} .doc .c-lima{color:var(--lima)} .doc .c-turq{color:var(--turquesa)} .doc .c-pet{color:var(--petroleo)}
-.doc .c-texto{color:var(--texto)} .doc .c-cinza{color:var(--cinza)} .doc .c-claro{color:var(--cinza-claro)}
-.doc .c-verm{color:var(--vermelho)} .doc .c-roxo{color:var(--roxo)} .doc .c-neutra{color:var(--neutra)}
-.doc .c-oliva{color:var(--oliva)} .doc .c-tom{color:var(--cinza-tom)} .doc .c-verde{color:var(--verde-escuro)}
-
-/* Formas */
-.doc .bg { left: 0; top: 0; width: 100%; background: var(--petroleo); }
-.doc .card { background: var(--card); border-radius: 5.76pt; }
-.doc .sq { width: 7.2pt; height: 7.2pt; }
-.doc .logo { display: block; }
-.doc .rodape { left: 32.4pt; --b: 819.1pt; }
-.doc .num { right: calc(var(--W) - 556pt); --b: 818.6pt; }
-
-/* Timeline e Tabelas */
-.doc .tl-data{right:calc(var(--W) - 97.2pt)} .doc .tl-txt{left:133.2pt;width:350pt} .doc .tl-tag{right:calc(var(--W) - 563pt);--dy:-1.5pt}
-.doc .dot{position:absolute;border-radius:50%;left:calc(113.75pt - var(--d) / 2);top:calc(var(--b) - 1.3pt - var(--d) / 2);width:var(--d);height:var(--d)}
-.doc .dot.g{--d:11.5pt} .doc .dot.p{--d:9.85pt;background:#fff;border:1.25pt solid var(--cinza-claro)}
-.doc .dot.next{--d:12.75pt;background:#fff;border:1.25pt solid var(--roxo)}
-.doc .dot.neg{background:var(--vermelho)} .doc .dot.neu{background:var(--neutra)}
-.doc .dot.pos{background:var(--verde-escuro)} .doc .dot.acl{background:var(--aclass)}
-.doc .lg-dot{width:8.6pt;height:8.6pt;border-radius:50%;top:117.3pt}
-.doc .lg-dot.o{width:9.85pt;height:9.85pt;top:116.68pt;background:#fff;border:1.25pt solid var(--cinza-claro)}
-
-.doc .tab{left:32.4pt;top:536.4pt;width:530.6pt;border-collapse:collapse;table-layout:fixed;font-size:8pt}
-.doc .tab th, .doc .tab td{border:.45pt solid var(--linha);padding:0 0 0 4.3pt;vertical-align:middle;text-align:left;line-height:9pt;overflow:hidden}
-.doc .tab th{background:var(--petroleo);color:#fff;font-weight:700;height:17.7pt}
-.doc .tab td{height:26.7pt;font-style:italic;color:var(--cinza);padding-right:4.3pt}
-.doc .tab tbody tr:nth-child(even) td{background:var(--zebra)}
-.doc .tag-print{height:19.69pt;border:.99pt solid;border-radius:9.85pt;background:#fff;top:251.5pt;position:absolute;}
-
-/* Impressão */
-@media print {
-  @page { size: A4; margin: 0; }
-  html, body { background: #fff !important; }
-  .doc { display: block; padding: 0; background: #fff; }
-  .doc .page { box-shadow: none; break-after: page; page-break-after: always; }
-  .doc .page:last-child { break-after: auto; page-break-after: auto; }
-  .print-hidden { display: none !important; }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
 }

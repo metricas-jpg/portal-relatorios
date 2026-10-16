@@ -3,9 +3,10 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { obterEmailsAutorizados, obterDadosDoRelatorio } from '@/lib/google-sheets';
 import Link from 'next/link';
+import './gerador.css'; // Importando os estilos isolados
 
 export default async function GeradorPage() {
-  // 1. SEGURANÇA
+  // SEGURANÇA
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) redirect('/'); 
   
@@ -22,11 +23,11 @@ export default async function GeradorPage() {
     );
   }
 
-  // 2. BUSCA DE DADOS
+  // BUSCA DE DADOS
   const dados = await obterDadosDoRelatorio();
   const { geral, registros, acionamentos } = dados;
 
-  // 3. MATEMÁTICA E AGRUPAMENTOS
+  // MATEMÁTICA E AGRUPAMENTOS
   const totalAcumulado = registros.reduce((acc, curr) => acc + (curr.volume || 1), 0);
   const platMap: Record<string, number> = { Imprensa: 0, Instagram: 0, 'X/Twitter': 0, Facebook: 0, LinkedIn: 0, YouTube: 0 };
   
@@ -36,11 +37,9 @@ export default async function GeradorPage() {
     }
   });
 
-  // Timeline e Clipping
   const timelineItens = registros.filter(r => r.mostrarTimeline);
   const clippings = registros.filter(r => r.gerarClipping);
 
-  // Matemática do Gráfico do Claude
   const graficoDias = Array.from(new Set(registros.map(r => r.data))).filter(d => d !== '-' && d !== '' && d.includes('/'));
   const X0 = 43, X1 = 552.4, BASE = 741.2, LARG = 25.3, UNID = 17.3;
   const passo = graficoDias.length > 0 ? (X1 - X0) / graficoDias.length : 0;
@@ -50,7 +49,6 @@ export default async function GeradorPage() {
     Facebook: 'var(--verde)', LinkedIn: 'var(--lima)', YouTube: 'var(--laranja)'
   };
 
-  // Helper de Cores da Timeline
   const getCorPontoTimeline = (tonalidade: string) => {
     const t = tonalidade.toUpperCase();
     if (t === 'NEGATIVA') return 'neg';
@@ -65,7 +63,6 @@ export default async function GeradorPage() {
     return 'c-cinza';
   };
 
-  // Helper prático para inserir variáveis CSS no style do React
   const st = (b: string | number, left?: string | number, extra?: any) => ({
     '--b': typeof b === 'number' ? `${b}pt` : b,
     ...(left && { left: typeof left === 'number' ? `${left}pt` : left }),
@@ -87,7 +84,7 @@ export default async function GeradorPage() {
         </button>
       </header>
 
-      {/* ======================= PÁGINA 1: RESUMO ======================= */}
+      {/* ======================= PÁGINA 1 ======================= */}
       <section className="page" id="p1">
         <div className="bg" style={{ height: '205.2pt' }}></div>
         <span className="t wrap z10 c-branco" style={st('31.6pt', '32.4pt', { width: '370pt' })}>
@@ -110,6 +107,7 @@ export default async function GeradorPage() {
         <span className="t wrap z8 c-cinza" style={st('290.9pt', '46.8pt', { width: '229.3pt' })}>{geral.risco_texto}</span>
 
         <div className="card" style={{ position:'absolute', left:'304.9pt', top:'219.6pt', width:'258.1pt', height:'95pt' }}></div>
+        {/* CORREÇÃO AQUI: className ao invés de class */}
         <span className="t z75 b sp c-cinza" style={st('238.6pt', '319.3pt')}>STATUS DA CRISE</span>
         <span className="t z75 b c-cinza r" style={st('238.6pt', undefined, { right: 'calc(var(--W) - 548.7pt)' })}>→ {geral.status_tendencia}</span>
         <span className="t z19 b c-roxo" style={st('270.7pt', '319.3pt')}>{geral.status_crise}</span>
@@ -131,7 +129,6 @@ export default async function GeradorPage() {
         <span className="t z26 b c-pet" style={st('387.7pt', '264.1pt')}>{totalAcumulado}</span>
         <span className="t z7 c-cinza" style={st('401.5pt', '264.1pt')}>desde {geral.inicio_monitoramento.split('/')[0]}/{geral.inicio_monitoramento.split('/')[1]}</span>
         
-        {/* Legenda Dinâmica de Plataformas */}
         <div className="sq" style={{ position:'absolute', left:'321.7pt', top:'361pt', background:'var(--roxo)' }}></div>
         <div className="sq" style={{ position:'absolute', left:'321.7pt', top:'376.9pt', background:'var(--turquesa)' }}></div>
         <div className="sq" style={{ position:'absolute', left:'321.7pt', top:'392.7pt', background:'var(--petroleo)' }}></div>
@@ -160,7 +157,6 @@ export default async function GeradorPage() {
         <span className="t z7 i c-cinza" style={st('534.7pt', '32.4pt')}>Protagonismo: {geral.protagonismo}</span>
         <span className="t wrap z9 lh119 c-texto" style={st('509pt', '162pt', { width: '404pt' })}>{geral.o_que_significa}</span>
 
-        {/* CABEÇALHO DO GRÁFICO */}
         <span className="t z75 b sp c-pet" style={st('579.9pt', '32.4pt')}>MENÇÕES AO SICOOB POR DIA DE COLETA, POR REDE</span>
         <div style={{ position:'absolute', left:'32.4pt', top:'594pt', width:'7.9pt', height:'7.9pt', background:'var(--roxo)' }}></div>
         <div style={{ position:'absolute', left:'102.2pt', top:'594pt', width:'7.9pt', height:'7.9pt', background:'var(--turquesa)' }}></div>
@@ -175,7 +171,6 @@ export default async function GeradorPage() {
         <span className="t z75 c-texto" style={st('600.9pt', '332.6pt')}>LinkedIn</span>
         <span className="t z75 c-texto" style={st('600.9pt', '402.5pt')}>YouTube</span>
 
-        {/* RENDERIZAÇÃO DO GRÁFICO EM REACT */}
         <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' }}>
           <div style={{ position: 'absolute', left: `${X0}pt`, top: `${BASE - 0.5}pt`, width: `${X1 - X0}pt`, height: '0.99pt', background: 'var(--linha)' }}></div>
           {Array.from({ length: graficoDias.length + 1 }).map((_, i) => (
@@ -207,7 +202,7 @@ export default async function GeradorPage() {
         <span className="t z8 c-cinza r num">1</span>
       </section>
 
-      {/* ======================= PÁGINA 2: TIMELINE E TABELA ======================= */}
+      {/* ======================= PÁGINA 2 ======================= */}
       <section className="page" id="p2">
         <div className="bg" style={{ height: '68.4pt' }}></div>
         <span className="t z12 b c-lima" style={st('30pt', '32.4pt')}>EVOLUÇÃO · ACIONAMENTOS</span>
@@ -229,7 +224,6 @@ export default async function GeradorPage() {
 
         <div style={{ position: 'absolute', left: '113.05pt', top: '151.2pt', width: '1.5pt', height: '330pt', background: 'var(--linha)' }}></div>
 
-        {/* TIMELINE DINÂMICA (Base = 152.5pt + 36pt a cada linha) */}
         {timelineItens.map((item, idx) => {
           const baseB = 152.5 + (idx * 36);
           const corPonto = getCorPontoTimeline(item.tonalidade);
@@ -262,7 +256,6 @@ export default async function GeradorPage() {
           );
         })}
 
-        {/* TABELA DE ACIONAMENTOS DINÂMICA */}
         <span className="t z13 b c-turq" style={st('499pt', '32.4pt')}>ACIONAMENTOS DE IMPRENSA</span>
         {acionamentos.length === 0 && <span className="t z8 i c-cinza" style={st('521.3pt', '32.4pt')}>Nenhum acionamento no período.</span>}
         
@@ -282,7 +275,7 @@ export default async function GeradorPage() {
         <span className="t z8 c-cinza r num">2</span>
       </section>
 
-      {/* ======================= PÁGINA 3: CONTEXTO ======================= */}
+      {/* ======================= PÁGINA 3 ======================= */}
       <section className="page" id="p3">
         <div className="bg" style={{ height: '68.4pt' }}></div>
         <span className="t z12 b c-lima" style={st('30pt', '32.4pt')}>CONTEXTO DO CASO</span>
@@ -316,7 +309,7 @@ export default async function GeradorPage() {
         <span className="t z8 c-cinza r num">3</span>
       </section>
 
-      {/* ======================= PÁGINAS 4+: CLIPPING (LOOP DINÂMICO) ======================= */}
+      {/* ======================= PÁGINA 4+ ======================= */}
       {clippings.map((clip, idx) => (
         <section className="page" key={idx}>
           <div className="bg" style={{ height: '68.4pt' }}></div>
@@ -351,7 +344,6 @@ export default async function GeradorPage() {
           <span className="t z75 b sp c-oliva" style={st('300.5pt', '46.8pt')}>O QUE A MATÉRIA DIZ SOBRE O SICOOB</span>
           <span className="t wrap z9 lh119 c-texto" style={st('319.7pt', '46.8pt', { width: '501.8pt' })}>{clip.trecho}</span>
 
-          {/* Área da Imagem/Print */}
           <svg style={{ position:'absolute', left:'31.9pt', top:'377.5pt', width:'531.6pt', height:'411.4pt' }} viewBox="0 0 531.6 411.4">
             <rect x=".5" y=".5" width="530.6" height="410.4" rx="5.76" fill="#FAFBFB" stroke="#A9B5B9" strokeWidth=".99" strokeDasharray="3.97 2.98"/>
           </svg>
