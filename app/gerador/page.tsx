@@ -3,10 +3,10 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { obterEmailsAutorizados, obterDadosDoRelatorio } from '@/lib/google-sheets';
 import Link from 'next/link';
-import './gerador.css'; // Importando os estilos isolados
+import './gerador.css';
 
 export default async function GeradorPage() {
-  // SEGURANÇA
+  // 1. SEGURANÇA
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) redirect('/'); 
   
@@ -23,11 +23,56 @@ export default async function GeradorPage() {
     );
   }
 
-  // BUSCA DE DADOS
+  // 2. BUSCA DE DADOS
   const dados = await obterDadosDoRelatorio();
-  const { geral, registros, acionamentos } = dados;
+  const { geral = {}, registros = [], acionamentos = [] } = dados;
 
-  // MATEMÁTICA E AGRUPAMENTOS
+  // =======================================================================
+  // SISTEMA DE DEBUG: Verifica o que falta na planilha
+  // =======================================================================
+  const alertasDebug: string[] = [];
+  
+  if (!geral.titulo_crise) alertasDebug.push('Aba Geral: titulo_crise');
+  if (!geral.subtitulo_unidade) alertasDebug.push('Aba Geral: subtitulo_unidade');
+  if (!geral.inicio_monitoramento) alertasDebug.push('Aba Geral: inicio_monitoramento');
+  if (!geral.ultima_atualizacao) alertasDebug.push('Aba Geral: ultima_atualizacao');
+  if (!geral.nivel_risco) alertasDebug.push('Aba Geral: nivel_risco');
+  if (!geral.status_crise) alertasDebug.push('Aba Geral: status_crise');
+  if (!geral.o_que_mudou) alertasDebug.push('Aba Geral: o_que_mudou');
+  if (!geral.o_que_significa) alertasDebug.push('Aba Geral: o_que_significa');
+  if (!geral.protagonismo) alertasDebug.push('Aba Geral: protagonismo');
+  if (!geral.analise_caso) alertasDebug.push('Aba Geral: analise_caso');
+  if (!geral.papel_sicoob) alertasDebug.push('Aba Geral: papel_sicoob');
+  if (!geral.centro_pauta) alertasDebug.push('Aba Geral: centro_pauta');
+  if (!geral.gatilhos_escalada) alertasDebug.push('Aba Geral: gatilhos_escalada');
+  if (registros.length === 0) alertasDebug.push('Aba Registro_Central: Nenhum dado preenchido.');
+
+  // =======================================================================
+  // VARIÁVEIS SEGURAS (Previnem a quebra da página)
+  // =======================================================================
+  const titulo = geral.titulo_crise || 'TÍTULO NÃO DEFINIDO';
+  const subtitulo = geral.subtitulo_unidade || 'UNIDADE NÃO DEFINIDA';
+  const ultimaAtualizacao = geral.ultima_atualizacao || '--/--/----';
+  const edicao = geral.edicao_numero || '--';
+  const protagonismo = geral.protagonismo || 'Não informado';
+  
+  const inicioMon = geral.inicio_monitoramento || '';
+  const inicioData = inicioMon.includes(',') ? inicioMon.split(',')[0] : inicioMon;
+  const inicioPartes = inicioMon.split('/');
+  const mesAno = inicioPartes.length >= 2 ? `${inicioPartes[0]}/${inicioPartes[1]}` : inicioMon;
+
+  const mencoesGerais = geral.mencoes_gerais_tema || '';
+  const mencoesQtd = mencoesGerais.split(' ')[0] || '0';
+  const mencoesTxt = mencoesGerais.replace(/^\d+\s/, '') || '';
+
+  const acionamentosCard = geral.acionamentos_imprensa_card || '';
+  const acionamentosQtd = acionamentosCard.split(' ')[0] || '0';
+  const acionamentosTxt = acionamentosCard.replace(/^\d+\s/, '') || '';
+
+  const gatilhos = (geral.gatilhos_escalada || '').split('\n').filter(g => g.trim() !== '');
+  const nivelRisco = geral.nivel_risco || 'BAIXO';
+
+  // 3. MATEMÁTICA E AGRUPAMENTOS
   const totalAcumulado = registros.reduce((acc, curr) => acc + (curr.volume || 1), 0);
   const platMap: Record<string, number> = { Imprensa: 0, Instagram: 0, 'X/Twitter': 0, Facebook: 0, LinkedIn: 0, YouTube: 0 };
   
@@ -40,7 +85,7 @@ export default async function GeradorPage() {
   const timelineItens = registros.filter(r => r.mostrarTimeline);
   const clippings = registros.filter(r => r.gerarClipping);
 
-  const graficoDias = Array.from(new Set(registros.map(r => r.data))).filter(d => d !== '-' && d !== '' && d.includes('/'));
+  const graficoDias = Array.from(new Set(registros.map(r => r.data))).filter(d => d && d !== '-' && d.includes('/'));
   const X0 = 43, X1 = 552.4, BASE = 741.2, LARG = 25.3, UNID = 17.3;
   const passo = graficoDias.length > 0 ? (X1 - X0) / graficoDias.length : 0;
   
@@ -50,14 +95,15 @@ export default async function GeradorPage() {
   };
 
   const getCorPontoTimeline = (tonalidade: string) => {
-    const t = tonalidade.toUpperCase();
+    const t = (tonalidade || '').toUpperCase();
     if (t === 'NEGATIVA') return 'neg';
     if (t === 'NEUTRA') return 'neu';
     if (t === 'POSITIVA') return 'pos';
     return 'acl';
   };
+  
   const getCorTextoTimeline = (tonalidade: string) => {
-    const t = tonalidade.toUpperCase();
+    const t = (tonalidade || '').toUpperCase();
     if (t === 'NEGATIVA') return 'c-verm';
     if (t === 'NEUTRA') return 'c-neutra';
     return 'c-cinza';
@@ -84,6 +130,26 @@ export default async function GeradorPage() {
         </button>
       </header>
 
+      {/* =======================================================================
+          PAINEL DE DEBUG (Alerta de preenchimento na tela, some no PDF)
+          ======================================================================= */}
+      {alertasDebug.length > 0 && (
+        <div className="print-hidden w-full max-w-[595pt] bg-[#FFF6CC] border border-[#E8D277] text-[#6B5300] p-4 rounded-xl shadow-sm mb-4">
+          <h3 className="font-bold text-sm mb-2 flex items-center gap-2">
+            <svg className="w-5 h-5 text-[#D9962B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Faltam dados na Planilha
+          </h3>
+          <p className="text-xs mb-2 opacity-90">O PDF ficará com espaços em branco. Verifique os campos:</p>
+          <ul className="text-[11px] grid grid-cols-2 gap-1 list-disc pl-5 opacity-80 font-mono">
+            {alertasDebug.map((alerta, i) => (
+              <li key={i}>{alerta}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* ======================= PÁGINA 1 ======================= */}
       <section className="page" id="p1">
         <div className="bg" style={{ height: '205.2pt' }}></div>
@@ -93,41 +159,40 @@ export default async function GeradorPage() {
         <img className="logo" src="/logo-sicoob.svg" alt="Sicoob" style={{ position: 'absolute', left: '447.85pt', top: '25.88pt', width: '115.17pt', height: '29.99pt' }} />
         
         <span className="t z95 b c-lima" style={st('70.4pt', '32.4pt')}>RELATÓRIO DE MONITORAMENTO DE CRISE</span>
-        <span className="t z24 b c-branco" style={st('117.2pt', '32.4pt')}>{geral.titulo_crise}</span>
-        <span className="t z15 b c-lima" style={st('147.8pt', '32.4pt')}>{geral.subtitulo_unidade}</span>
+        <span className="t z24 b c-branco" style={st('117.2pt', '32.4pt')}>{titulo}</span>
+        <span className="t z15 b c-lima" style={st('147.8pt', '32.4pt')}>{subtitulo}</span>
         <span className="t z85 c-branco" style={st('182.7pt', '32.4pt')}>
-          Início do monitoramento: {geral.inicio_monitoramento}   ·   Edição nº {geral.edicao_numero || '--'}   ·   Período: {geral.inicio_monitoramento.split(',')[0]} a {geral.ultima_atualizacao}   ·   Última atualização: {geral.ultima_atualizacao}
+          Início do monitoramento: {inicioMon}   ·   Edição nº {edicao}   ·   Período: {inicioData} a {ultimaAtualizacao}   ·   Última atualização: {ultimaAtualizacao}
         </span>
 
         {/* RISCO E STATUS */}
         <div className="card" style={{ position:'absolute', left:'32.4pt', top:'219.6pt', width:'258.1pt', height:'95pt' }}></div>
         <span className="t z75 b sp c-cinza" style={st('238.6pt', '46.8pt')}>RISCO PARA A INSTITUIÇÃO</span>
-        <span className="t z75 b c-cinza r" style={st('238.6pt', undefined, { right: 'calc(var(--W) - 276.1pt)' })}>→ {geral.risco_tendencia}</span>
-        <span className={`t z26 b ${geral.nivel_risco === 'ALTO' ? 'c-verm' : 'c-turq'}`} style={st('273.5pt', '46.8pt')}>{geral.nivel_risco}</span>
-        <span className="t wrap z8 c-cinza" style={st('290.9pt', '46.8pt', { width: '229.3pt' })}>{geral.risco_texto}</span>
+        <span className="t z75 b c-cinza r" style={st('238.6pt', undefined, { right: 'calc(var(--W) - 276.1pt)' })}>→ {geral.risco_tendencia || ''}</span>
+        <span className={`t z26 b ${nivelRisco === 'ALTO' ? 'c-verm' : 'c-turq'}`} style={st('273.5pt', '46.8pt')}>{nivelRisco}</span>
+        <span className="t wrap z8 c-cinza" style={st('290.9pt', '46.8pt', { width: '229.3pt' })}>{geral.risco_texto || ''}</span>
 
         <div className="card" style={{ position:'absolute', left:'304.9pt', top:'219.6pt', width:'258.1pt', height:'95pt' }}></div>
-        {/* CORREÇÃO AQUI: className ao invés de class */}
         <span className="t z75 b sp c-cinza" style={st('238.6pt', '319.3pt')}>STATUS DA CRISE</span>
-        <span className="t z75 b c-cinza r" style={st('238.6pt', undefined, { right: 'calc(var(--W) - 548.7pt)' })}>→ {geral.status_tendencia}</span>
-        <span className="t z19 b c-roxo" style={st('270.7pt', '319.3pt')}>{geral.status_crise}</span>
-        <span className="t wrap z8 c-cinza" style={st('290.9pt', '319.3pt', { width: '229.3pt' })}>{geral.status_texto}</span>
+        <span className="t z75 b c-cinza r" style={st('238.6pt', undefined, { right: 'calc(var(--W) - 548.7pt)' })}>→ {geral.status_tendencia || ''}</span>
+        <span className="t z19 b c-roxo" style={st('270.7pt', '319.3pt')}>{geral.status_crise || ''}</span>
+        <span className="t wrap z8 c-cinza" style={st('290.9pt', '319.3pt', { width: '229.3pt' })}>{geral.status_texto || ''}</span>
 
         {/* 4 INDICADORES NUMÉRICOS */}
         <div className="card" style={{ position:'absolute', left:'32.4pt', top:'327.6pt', width:'99.6pt', height:'86.4pt', background:'var(--petroleo)' }}></div>
         <span className="t z7 b c-branco" style={st('343.2pt', '43.2pt')}>NOVAS MENÇÕES<br/>AO SICOOB</span>
-        <span className="t z26 b c-branco" style={st('387.7pt', '43.2pt')}>{geral.novas_mencoes_qtd}</span>
-        <span className="t z7 c-lima" style={st('401.5pt', '43.2pt')}>{geral.novas_mencoes_detalhe}</span>
+        <span className="t z26 b c-branco" style={st('387.7pt', '43.2pt')}>{geral.novas_mencoes_qtd || '0'}</span>
+        <span className="t z7 c-lima" style={st('401.5pt', '43.2pt')}>{geral.novas_mencoes_detalhe || ''}</span>
 
         <div className="card" style={{ position:'absolute', left:'142.8pt', top:'327.6pt', width:'99.6pt', height:'86.4pt' }}></div>
         <span className="t z7 b c-cinza" style={st('343.2pt', '153.6pt')}>MENÇÕES GERAIS<br/>AO TEMA</span>
-        <span className="t z26 b c-claro" style={st('387.7pt', '153.6pt')}>{geral.mencoes_gerais_tema.split(' ')[0]}</span>
-        <span className="t z7 c-cinza" style={st('401.5pt', '153.6pt')}>{geral.mencoes_gerais_tema.replace(/^\d+\s/, '')}</span>
+        <span className="t z26 b c-claro" style={st('387.7pt', '153.6pt')}>{mencoesQtd}</span>
+        <span className="t z7 c-cinza" style={st('401.5pt', '153.6pt')}>{mencoesTxt}</span>
 
         <div className="card" style={{ position:'absolute', left:'253.3pt', top:'327.6pt', width:'199.3pt', height:'86.4pt' }}></div>
         <span className="t z7 b c-cinza" style={st('343.2pt', '264.1pt')}>MENÇÕES AO SICOOB ACUMULADAS</span>
         <span className="t z26 b c-pet" style={st('387.7pt', '264.1pt')}>{totalAcumulado}</span>
-        <span className="t z7 c-cinza" style={st('401.5pt', '264.1pt')}>desde {geral.inicio_monitoramento.split('/')[0]}/{geral.inicio_monitoramento.split('/')[1]}</span>
+        <span className="t z7 c-cinza" style={st('401.5pt', '264.1pt')}>desde {mesAno}</span>
         
         <div className="sq" style={{ position:'absolute', left:'321.7pt', top:'361pt', background:'var(--roxo)' }}></div>
         <div className="sq" style={{ position:'absolute', left:'321.7pt', top:'376.9pt', background:'var(--turquesa)' }}></div>
@@ -144,19 +209,20 @@ export default async function GeradorPage() {
 
         <div className="card" style={{ position:'absolute', left:'463.4pt', top:'327.6pt', width:'99.6pt', height:'86.4pt' }}></div>
         <span className="t z7 b c-cinza" style={st('343.2pt', '474.2pt')}>ACIONAMENTOS<br/>DE IMPRENSA</span>
-        <span className="t z26 b c-claro" style={st('387.7pt', '474.2pt')}>{geral.acionamentos_imprensa_card.split(' ')[0]}</span>
-        <span className="t z7 c-cinza" style={st('401.5pt', '474.2pt')}>{geral.acionamentos_imprensa_card.replace(/^\d+\s/, '')}</span>
+        <span className="t z26 b c-claro" style={st('387.7pt', '474.2pt')}>{acionamentosQtd}</span>
+        <span className="t z7 c-cinza" style={st('401.5pt', '474.2pt')}>{acionamentosTxt}</span>
 
         {/* TEXTOS ANALÍTICOS */}
         <span className="t z85 b c-turq" style={st('440.5pt', '32.4pt')}>O QUE MUDOU</span>
-        <span className="t wrap z9 lh119 c-texto" style={st('442.1pt', '162pt', { width: '404pt' })}>{geral.o_que_mudou}</span>
+        <span className="t wrap z9 lh119 c-texto" style={st('442.1pt', '162pt', { width: '404pt' })}>{geral.o_que_mudou || ''}</span>
         
         <div style={{ position:'absolute', left:'32.4pt', top: '492.83pt', width: '530.6pt', height: '.74pt', background: 'var(--linha)' }}></div>
         
         <span className="t z85 b c-turq" style={st('507.4pt', '32.4pt')}>O QUE SIGNIFICA<br/>PARA O SICOOB</span>
-        <span className="t z7 i c-cinza" style={st('534.7pt', '32.4pt')}>Protagonismo: {geral.protagonismo}</span>
-        <span className="t wrap z9 lh119 c-texto" style={st('509pt', '162pt', { width: '404pt' })}>{geral.o_que_significa}</span>
+        <span className="t z7 i c-cinza" style={st('534.7pt', '32.4pt')}>Protagonismo: {protagonismo}</span>
+        <span className="t wrap z9 lh119 c-texto" style={st('509pt', '162pt', { width: '404pt' })}>{geral.o_que_significa || ''}</span>
 
+        {/* GRÁFICO */}
         <span className="t z75 b sp c-pet" style={st('579.9pt', '32.4pt')}>MENÇÕES AO SICOOB POR DIA DE COLETA, POR REDE</span>
         <div style={{ position:'absolute', left:'32.4pt', top:'594pt', width:'7.9pt', height:'7.9pt', background:'var(--roxo)' }}></div>
         <div style={{ position:'absolute', left:'102.2pt', top:'594pt', width:'7.9pt', height:'7.9pt', background:'var(--turquesa)' }}></div>
@@ -183,7 +249,7 @@ export default async function GeradorPage() {
             let totalDoDia = 0;
 
             return (
-              <div key={dia}>
+              <div key={`dia-${dia}`}>
                 {itensDoDia.map((item, idx) => {
                   const alt = (item.volume || 1) * UNID;
                   topo -= alt;
@@ -206,7 +272,7 @@ export default async function GeradorPage() {
       <section className="page" id="p2">
         <div className="bg" style={{ height: '68.4pt' }}></div>
         <span className="t z12 b c-lima" style={st('30pt', '32.4pt')}>EVOLUÇÃO · ACIONAMENTOS</span>
-        <span className="t z8 c-branco" style={st('50pt', '32.4pt')}>{geral.titulo_crise.toUpperCase()} · {geral.subtitulo_unidade.toUpperCase()} · EDIÇÃO DE {geral.ultima_atualizacao.toUpperCase()}</span>
+        <span className="t z8 c-branco" style={st('50pt', '32.4pt')}>{titulo.toUpperCase()} · {subtitulo.toUpperCase()} · EDIÇÃO DE {ultimaAtualizacao.toUpperCase()}</span>
         <img className="logo" src="/logo-sicoob.svg" alt="Sicoob" style={{ position: 'absolute', left: '465.85pt', top: '20.86pt', width: '97.17pt', height: '25.31pt' }} />
 
         <span className="t z13 b c-turq" style={st('99.4pt', '32.4pt')}>LINHA DO TEMPO DAS MENÇÕES</span>
@@ -231,27 +297,27 @@ export default async function GeradorPage() {
           
           if (item.proximoMarco) {
             return (
-              <div key={idx} style={st(baseB, undefined, { position: 'static' })}>
+              <div key={`tl-${idx}`} style={st(baseB, undefined, { position: 'static' })}>
                 <span className="t z85 b c-roxo tl-data">Próximo</span><i className="dot next"></i>
-                <span className="t wrap z85 b c-texto tl-txt">{item.fato}</span>
+                <span className="t wrap z85 b c-texto tl-txt">{item.fato || ''}</span>
               </div>
             );
           }
 
           if (!item.envolveSicoob) {
             return (
-              <div key={idx} style={st(baseB, undefined, { position: 'static' })}>
-                <span className="t z85 b c-pet tl-data">{item.data}</span><i className="dot p"></i>
-                <span className="t wrap z85 c-cinza tl-txt">{item.fato}</span>
+              <div key={`tl-${idx}`} style={st(baseB, undefined, { position: 'static' })}>
+                <span className="t z85 b c-pet tl-data">{item.data || ''}</span><i className="dot p"></i>
+                <span className="t wrap z85 c-cinza tl-txt">{item.fato || ''}</span>
               </div>
             );
           }
 
           return (
-            <div key={idx} style={st(baseB, undefined, { position: 'static' })}>
-              <span className="t z85 b c-pet tl-data">{item.data}</span><i className={`dot g ${corPonto}`}></i>
-              <span className="t wrap z85 c-texto tl-txt">{item.fato}</span>
-              <span className={`t z7 b tl-tag ${corTextoTag}`}>{item.tonalidade.toUpperCase()}</span>
+            <div key={`tl-${idx}`} style={st(baseB, undefined, { position: 'static' })}>
+              <span className="t z85 b c-pet tl-data">{item.data || ''}</span><i className={`dot g ${corPonto}`}></i>
+              <span className="t wrap z85 c-texto tl-txt">{item.fato || ''}</span>
+              <span className={`t z7 b tl-tag ${corTextoTag}`}>{(item.tonalidade || '').toUpperCase()}</span>
             </div>
           );
         })}
@@ -265,7 +331,7 @@ export default async function GeradorPage() {
             <thead><tr><th>Data</th><th>Veículo</th><th>Jornalista</th><th>Demanda</th><th>Prazo</th><th>Resposta</th><th>Status</th></tr></thead>
             <tbody>
               {acionamentos.map((ac, idx) => (
-                <tr key={idx}><td>{ac.data}</td><td>{ac.veiculo}</td><td>{ac.jornalista}</td><td>{ac.demanda}</td><td>{ac.prazo}</td><td>{ac.resposta}</td><td>{ac.status}</td></tr>
+                <tr key={`ac-${idx}`}><td>{ac.data}</td><td>{ac.veiculo}</td><td>{ac.jornalista}</td><td>{ac.demanda}</td><td>{ac.prazo}</td><td>{ac.resposta}</td><td>{ac.status}</td></tr>
               ))}
             </tbody>
           </table>
@@ -279,26 +345,26 @@ export default async function GeradorPage() {
       <section className="page" id="p3">
         <div className="bg" style={{ height: '68.4pt' }}></div>
         <span className="t z12 b c-lima" style={st('30pt', '32.4pt')}>CONTEXTO DO CASO</span>
-        <span className="t z8 c-branco" style={st('50pt', '32.4pt')}>{geral.titulo_crise.toUpperCase()} · {geral.subtitulo_unidade.toUpperCase()} · EDIÇÃO DE {geral.ultima_atualizacao.toUpperCase()}</span>
+        <span className="t z8 c-branco" style={st('50pt', '32.4pt')}>{titulo.toUpperCase()} · {subtitulo.toUpperCase()} · EDIÇÃO DE {ultimaAtualizacao.toUpperCase()}</span>
         <img className="logo" src="/logo-sicoob.svg" alt="Sicoob" style={{ position: 'absolute', left: '465.85pt', top: '20.86pt', width: '97.17pt', height: '25.31pt' }} />
 
         <span className="t z13 b c-turq" style={st('99.4pt', '32.4pt')}>ANÁLISE DO CASO</span>
-        <span className="t z75 i c-cinza" style={st('119.1pt', '32.4pt')}>Texto de referência: escrito na abertura do caso e revisado só quando o papel do Sicoob mudar.  Última revisão: {geral.analise_revisao_data}.</span>
-        <span className="t wrap z11 lh145 b c-pet" style={st('149.1pt', '32.4pt', { width: '530.6pt' })}>{geral.analise_caso}</span>
+        <span className="t z75 i c-cinza" style={st('119.1pt', '32.4pt')}>Texto de referência: escrito na abertura do caso e revisado só quando o papel do Sicoob mudar.  Última revisão: {geral.analise_revisao_data || '--'}.</span>
+        <span className="t wrap z11 lh145 b c-pet" style={st('149.1pt', '32.4pt', { width: '530.6pt' })}>{geral.analise_caso || ''}</span>
 
         <div className="card" style={{ position:'absolute', left:'32.4pt', top:'190.8pt', width:'258.1pt', height:'115.2pt' }}></div>
         <span className="t z75 b sp c-turq" style={st('209.8pt', '46.8pt')}>PAPEL DO SICOOB</span>
-        <span className="t wrap z9 lh119 c-texto" style={st('231.1pt', '46.8pt', { width: '229.3pt' })}>{geral.papel_sicoob}</span>
+        <span className="t wrap z9 lh119 c-texto" style={st('231.1pt', '46.8pt', { width: '229.3pt' })}>{geral.papel_sicoob || ''}</span>
 
         <div className="card" style={{ position:'absolute', left:'304.9pt', top:'190.8pt', width:'258.1pt', height:'115.2pt' }}></div>
         <span className="t z75 b sp c-turq" style={st('209.8pt', '319.3pt')}>QUEM ESTÁ NO CENTRO DA PAUTA</span>
-        <span className="t wrap z9 lh119 c-texto" style={st('231.1pt', '319.3pt', { width: '229.3pt' })}>{geral.centro_pauta}</span>
+        <span className="t wrap z9 lh119 c-texto" style={st('231.1pt', '319.3pt', { width: '229.3pt' })}>{geral.centro_pauta || ''}</span>
 
         <span className="t z75 b sp c-pet" style={st('335.1pt', '32.4pt')}>GATILHOS DE ESCALADA</span>
-        {geral.gatilhos_escalada.split('\n').map((gatilho, idx) => {
+        {gatilhos.map((gatilho, idx) => {
           const bBase = 356.7 + (idx * 16.8);
           return (
-            <div key={idx} style={st(bBase, undefined, { position: 'static' })}>
+            <div key={`gat-${idx}`} style={st(bBase, undefined, { position: 'static' })}>
               <span className="t z9 c-texto" style={st(bBase, '32.4pt')}>•</span>
               <span className="t z9 c-texto" style={st(bBase + 1.5, '44.4pt')}>{gatilho}</span>
             </div>
@@ -309,19 +375,19 @@ export default async function GeradorPage() {
         <span className="t z8 c-cinza r num">3</span>
       </section>
 
-      {/* ======================= PÁGINA 4+ ======================= */}
+      {/* ======================= PÁGINAS 4+ ======================= */}
       {clippings.map((clip, idx) => (
-        <section className="page" key={idx}>
+        <section className="page" key={`clip-${idx}`}>
           <div className="bg" style={{ height: '68.4pt' }}></div>
           <span className="t z12 b c-lima" style={st('30pt', '32.4pt')}>ANEXO · REGISTRO DE PUBLICAÇÃO</span>
-          <span className="t z8 c-branco" style={st('50pt', '32.4pt')}>{geral.titulo_crise.toUpperCase()} · {geral.subtitulo_unidade.toUpperCase()} · EDIÇÃO DE {geral.ultima_atualizacao.toUpperCase()}</span>
+          <span className="t z8 c-branco" style={st('50pt', '32.4pt')}>{titulo.toUpperCase()} · {subtitulo.toUpperCase()} · EDIÇÃO DE {ultimaAtualizacao.toUpperCase()}</span>
           <img className="logo" src="/logo-sicoob.svg" alt="Sicoob" style={{ position: 'absolute', left: '465.85pt', top: '20.86pt', width: '97.17pt', height: '25.31pt' }} />
 
           <div style={{ position:'absolute', left:'32.4pt', top:'86.4pt', width:'97.2pt', height:'21.6pt', borderRadius:'10.8pt', background:'var(--roxo)' }}></div>
           <span className="t z85 b c-branco c" style={st('100.6pt', '32.4pt', { width: '97.2pt' })}>IMPRENSA</span>
           <span className="t z8 c-cinza r" style={st('98pt', undefined, { right: 'calc(var(--W) - 562.8pt)' })}>Publicação {idx + 1} de {clippings.length}</span>
-          <span className="t z95 b c-turq" style={st('130.5pt', '32.4pt')}>{clip.plataforma}</span>
-          <span className="t wrap z15 lh189 b c-pet" style={st('156.2pt', '32.4pt', { width: '530.6pt' })}>{clip.fato}</span>
+          <span className="t z95 b c-turq" style={st('130.5pt', '32.4pt')}>{clip.plataforma || ''}</span>
+          <span className="t wrap z15 lh189 b c-pet" style={st('156.2pt', '32.4pt', { width: '530.6pt' })}>{clip.fato || ''}</span>
 
           <div className="card" style={{ position:'absolute', left:'32.4pt', top:'195.8pt', width:'126.2pt', height:'43.2pt' }}></div>
           <div className="card" style={{ position:'absolute', left:'167.2pt', top:'195.8pt', width:'126.2pt', height:'43.2pt' }}></div>
@@ -329,20 +395,20 @@ export default async function GeradorPage() {
           <div className="card" style={{ position:'absolute', left:'436.8pt', top:'195.8pt', width:'126.2pt', height:'43.2pt' }}></div>
           
           <span className="t z65 b c-cinza" style={st('208.1pt', '41.8pt')}>PUBLICAÇÃO</span>
-          <span className="t z9 b c-texto" style={st('225pt', '41.8pt')}>{clip.data}</span>
+          <span className="t z9 b c-texto" style={st('225pt', '41.8pt')}>{clip.data || ''}</span>
           <span className="t z65 b c-cinza" style={st('208.1pt', '176.6pt')}>LINK</span>
           <span className="t z9 i c-cinza" style={st('225pt', '176.6pt')}>{clip.link || 'Não informado'}</span>
           <span className="t z65 b c-cinza" style={st('208.1pt', '311.4pt')}>AUTORIA</span>
           <span className="t z9 b c-texto" style={st('225pt', '311.4pt')}>{clip.autoria || '--'}</span>
           <span className="t z65 b c-cinza" style={st('208.1pt', '446.2pt')}>TONALIDADE</span>
-          <span className="t z9 b c-texto" style={st('225pt', '446.2pt')}>{clip.tonalidade.toUpperCase()}</span>
+          <span className="t z9 b c-texto" style={st('225pt', '446.2pt')}>{(clip.tonalidade || '').toUpperCase()}</span>
 
           <div className="tag-print" style={{ left: '31.9pt', width: '165.19pt', borderColor: 'var(--petroleo)' }}></div>
-          <span className="t z7 b c-pet c" style={st('264.1pt', '32.4pt', { width: '164.2pt' })}>PROTAGONISMO: {geral.protagonismo.toUpperCase()}</span>
+          <span className="t z7 b c-pet c" style={st('264.1pt', '32.4pt', { width: '164.2pt' })}>PROTAGONISMO: {protagonismo.toUpperCase()}</span>
 
           <div className="card" style={{ position:'absolute', left:'32.4pt', top:'284.4pt', width:'530.6pt', height:'80.6pt', background:'var(--amarelo)' }}></div>
           <span className="t z75 b sp c-oliva" style={st('300.5pt', '46.8pt')}>O QUE A MATÉRIA DIZ SOBRE O SICOOB</span>
-          <span className="t wrap z9 lh119 c-texto" style={st('319.7pt', '46.8pt', { width: '501.8pt' })}>{clip.trecho}</span>
+          <span className="t wrap z9 lh119 c-texto" style={st('319.7pt', '46.8pt', { width: '501.8pt' })}>{clip.trecho || ''}</span>
 
           <svg style={{ position:'absolute', left:'31.9pt', top:'377.5pt', width:'531.6pt', height:'411.4pt' }} viewBox="0 0 531.6 411.4">
             <rect x=".5" y=".5" width="530.6" height="410.4" rx="5.76" fill="#FAFBFB" stroke="#A9B5B9" strokeWidth=".99" strokeDasharray="3.97 2.98"/>
