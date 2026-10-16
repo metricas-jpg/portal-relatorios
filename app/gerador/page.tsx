@@ -22,13 +22,12 @@ export default async function GeradorPage() {
     );
   }
 
-  // Busca os dados reais da planilha no Backend
+  // Puxa dados da planilha
   const dados = await obterDadosDoRelatorio();
   const { geral, registros } = dados;
 
-  // Lógica Matemática: Calcula os totais acumulados a partir do Registro Central
+  // Matemática dos totais acumulados
   const totalAcumulado = registros.reduce((acc, curr) => acc + (curr.volume || 1), 0);
-  
   const contagemPorPlataforma = registros.reduce((acc, curr) => {
     if (curr.plataforma && curr.plataforma !== '-') {
       acc[curr.plataforma] = (acc[curr.plataforma] || 0) + (curr.volume || 1);
@@ -36,169 +35,131 @@ export default async function GeradorPage() {
     return acc;
   }, {} as Record<string, number>);
 
-  // Monta a string no formato: "Imprensa 25 | Instagram 4 | X/Twitter 2"
   const stringPlataformas = Object.entries(contagemPorPlataforma)
-    .sort((a, b) => b[1] - a[1]) // Ordena do maior para o menor
+    .sort((a, b) => b[1] - a[1])
     .map(([plat, qtd]) => `${plat} ${qtd}`)
     .join(' | ');
 
+  // Define cores com base no risco e status
+  const corRisco = geral.nivel_risco === 'ALTO' ? '#B03A3A' : geral.nivel_risco === 'MÉDIO' ? '#D97706' : '#00AE9D';
+
   return (
-    <div className="min-h-screen bg-[#f4f7f8] text-[#003641] print:bg-white print:m-0 print:p-0">
+    <div className="min-h-screen bg-[#F3F6F6]">
       
-      {/* Barra de Controle (Visível apenas na tela, escondida no PDF) */}
-      <header className="bg-[#003641] text-white h-16 flex justify-between items-center px-6 shadow-md print:hidden">
+      {/* HEADER DE CONTROLE DA APLICAÇÃO (Não sai na impressão) */}
+      <header className="print-hidden bg-[#003641] text-white h-16 flex justify-between items-center px-6 shadow-md mb-8">
         <div className="flex items-center gap-4">
           <Link href="/" className="text-slate-300 hover:text-white transition">← Voltar</Link>
           <h1 className="text-lg font-bold border-l border-white/20 pl-4">Gerador: {geral.titulo_crise}</h1>
         </div>
-        
-        <button className="bg-[#00AE9D] hover:bg-[#008f81] text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 cursor-pointer">
-          <span className="hidden sm:inline">Aperte Ctrl + P para salvar o PDF</span>
-          <span className="sm:hidden">Imprimir (PDF)</span>
+        <button className="bg-[#00AE9D] hover:bg-[#008f81] text-white text-xs font-bold py-2 px-4 rounded-lg cursor-pointer">
+          Aperte Ctrl + P para salvar o PDF
         </button>
       </header>
 
-      <main className="max-w-7xl mx-auto py-8 px-4 flex flex-col items-center print:py-0 print:px-0">
-        
-        {/* =========================================================================
-            SLIDE 1: PÁGINA A4 PAISAGEM (297mm x 210mm)
-            ========================================================================= */}
-        <div className="w-[297mm] h-[210mm] bg-white shadow-2xl relative overflow-hidden flex flex-col print:shadow-none break-after-page">
+      {/* ÁREA DA FOLHA A4 (Utilizando as classes exatas do CSS do Claude) */}
+      <main className="flex flex-col items-center pb-12">
+        <div className="page">
           
           {/* CABEÇALHO DO RELATÓRIO */}
-          <div className="bg-[#003641] text-white px-8 pt-6 pb-4 shrink-0 relative">
-            <div className="flex justify-between items-start mb-4">
-              <div className="max-w-2xl">
-                <p className="text-[9px] font-semibold tracking-wider text-white uppercase mb-1">
-                  Presidência - Superintendência Negócios Digitais, Marketing e Experiência do Cooperado
-                </p>
-                <p className="text-[10px] font-bold tracking-widest text-[#CADB2A] uppercase mb-4">
-                  Relatório de Monitoramento de Crise
-                </p>
-                <h1 className="text-2xl font-bold leading-tight mb-1">
-                  {geral.titulo_crise}
-                </h1>
-                <h2 className="text-lg font-semibold text-[#CADB2A]">
-                  {geral.subtitulo_unidade}
-                </h2>
-              </div>
-              
-              <div className="flex flex-col items-end">
-                <Image src="/logo-sicoob.svg" alt="Sicoob" width={110} height={35} className="object-contain" priority />
-              </div>
-            </div>
-
-            {/* Linha de Metadados de Data */}
-            <div className="flex justify-between items-center text-[9px] text-white font-medium uppercase tracking-wider pt-3 border-t border-white/20">
-              <p>Início do monitoramento: {geral.inicio_monitoramento}</p>
-              {geral.edicao_numero && <p>Edição nº {geral.edicao_numero}</p>}
-              <p>Período: {geral.inicio_monitoramento.split(',')[0]} a {geral.ultima_atualizacao}</p>
-              <p>Última atualização: {geral.ultima_atualizacao}</p>
-            </div>
-          </div>
-
-          {/* CORPO DO SLIDE 1 */}
-          <div className="flex-1 px-8 py-5 flex flex-col gap-4">
+          <div className="hdr">
+            <div className="eyebrow">Presidência - Superintendência Negócios Digitais, Marketing e Experiência do Cooperado</div>
+            <div style={{ color: '#CADB2A', fontWeight: 'bold', fontSize: '11px', marginTop: '4px' }}>RELATÓRIO DE MONITORAMENTO DE CRISE</div>
+            <h1>{geral.titulo_crise}</h1>
+            <div className="sing">{geral.subtitulo_unidade}</div>
             
-            {/* LINHA 1: Bloco de Risco e Status */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Card Risco */}
-              <div>
-                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-[#00AE9D] pb-1 mb-2">
-                  Risco para a instituição
-                </p>
-                <div className="flex items-center gap-3 mb-1">
-                  <h3 className={`text-xl font-bold uppercase ${geral.nivel_risco === 'ALTO' ? 'text-red-600' : geral.nivel_risco === 'MÉDIO' ? 'text-orange-500' : 'text-green-600'}`}>
-                    {geral.nivel_risco}
-                  </h3>
-                  <span className="text-[#00AE9D] text-[10px] font-bold uppercase">
-                    {geral.risco_tendencia}
-                  </span>
+            <div className="logo">
+              <Image src="/logo-sicoob.svg" alt="Sicoob" width={120} height={34} />
+            </div>
+
+            <div className="metaln">
+              <span>Início do monitoramento: {geral.inicio_monitoramento}</span>
+              {geral.edicao_numero && <span>Edição nº {geral.edicao_numero}</span>}
+              <span>Período: {geral.inicio_monitoramento.split(',')[0]} a {geral.ultima_atualizacao}</span>
+              <span>Última atualização: {geral.ultima_atualizacao}</span>
+            </div>
+          </div>
+
+          {/* CORPO DO RELATÓRIO */}
+          <div className="body">
+            
+            {/* Cards Risco e Status */}
+            <div className="row2">
+              <div className="card">
+                <div className="k">
+                  <span>Risco para a Instituição</span>
+                  <span style={{ color: '#00AE9D' }}>{geral.risco_tendencia}</span>
                 </div>
-                <p className="text-[10px] text-[#003641] font-medium leading-snug">
-                  {geral.risco_texto}
-                </p>
+                <div className="big" style={{ color: corRisco }}>{geral.nivel_risco}</div>
+                <div className="d">{geral.risco_texto}</div>
               </div>
-
-              {/* Card Status */}
-              <div>
-                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-[#00AE9D] pb-1 mb-2">
-                  Status da crise
-                </p>
-                <div className="flex items-center gap-3 mb-1">
-                  <h3 className="text-xl font-bold uppercase text-[#003641]">
-                    {geral.status_crise}
-                  </h3>
-                  <span className="text-[#00AE9D] text-[10px] font-bold uppercase">
-                    {geral.status_tendencia}
-                  </span>
+              <div className="card">
+                <div className="k">
+                  <span>Status da Crise</span>
+                  <span style={{ color: '#00AE9D' }}>{geral.status_tendencia}</span>
                 </div>
-                <p className="text-[10px] text-[#003641] font-medium leading-snug">
-                  {geral.status_texto}
-                </p>
+                <div className="big" style={{ color: '#003641' }}>{geral.status_crise}</div>
+                <div className="d">{geral.status_texto}</div>
               </div>
             </div>
 
-            {/* LINHA 2: 4 Cartões de Indicadores Numéricos */}
-            <div className="grid grid-cols-4 gap-3">
-              <div className="bg-slate-50 border border-slate-200 p-2.5 rounded text-center flex flex-col justify-center">
-                <p className="text-[8px] font-bold text-[#003641] uppercase mb-1">Novas Menções<br/>ao Sicoob</p>
-                <p className="text-2xl font-bold text-[#00AE9D]">{geral.novas_mencoes_qtd}</p>
-                <p className="text-[8px] text-slate-500 mt-1">{geral.novas_mencoes_detalhe}</p>
+            {/* 4 Indicadores Menores */}
+            <div className="kpis">
+              <div className="kpi">
+                <div className="k">Novas Menções<br/>ao Sicoob</div>
+                <div className="n">{geral.novas_mencoes_qtd}</div>
+                <div className="c">{geral.novas_mencoes_detalhe}</div>
               </div>
-              <div className="bg-slate-50 border border-slate-200 p-2.5 rounded text-center flex flex-col justify-center">
-                <p className="text-[8px] font-bold text-[#003641] uppercase mb-1">Menções Gerais<br/>ao Tema</p>
-                <p className="text-lg font-bold text-[#00AE9D] mt-1">{geral.mencoes_gerais_tema}</p>
+              <div className="kpi">
+                <div className="k">Menções Gerais<br/>ao Tema</div>
+                <div className="n">{geral.mencoes_gerais_tema}</div>
               </div>
-              <div className="bg-slate-50 border border-slate-200 p-2.5 rounded text-center flex flex-col justify-center">
-                <p className="text-[8px] font-bold text-[#003641] uppercase mb-1">Menções ao Sicoob<br/>Acumuladas</p>
-                <p className="text-2xl font-bold text-[#00AE9D]">{totalAcumulado}</p>
-                <p className="text-[8px] text-slate-500 mt-1">desde {geral.inicio_monitoramento.split('/')[0]}/{geral.inicio_monitoramento.split('/')[1]}</p>
-                <p className="text-[7px] text-slate-400 mt-0.5 leading-tight">{stringPlataformas}</p>
+              <div className="kpi">
+                <div className="k">Menções ao Sicoob<br/>Acumuladas</div>
+                <div className="n">{totalAcumulado}</div>
+                <div className="c">desde {geral.inicio_monitoramento.split('/')[0]}/{geral.inicio_monitoramento.split('/')[1]}</div>
+                <div style={{ fontSize: '8px', color: '#5D6D71', marginTop: '2px' }}>{stringPlataformas}</div>
               </div>
-              <div className="bg-slate-50 border border-slate-200 p-2.5 rounded text-center flex flex-col justify-center">
-                <p className="text-[8px] font-bold text-[#003641] uppercase mb-1">Acionamentos<br/>de Imprensa</p>
-                <p className="text-lg font-bold text-[#00AE9D] mt-1">{geral.acionamentos_imprensa_card}</p>
-              </div>
-            </div>
-
-            {/* LINHA 3: Textos Analíticos */}
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-[10px] font-bold text-[#00AE9D] uppercase mb-1">O que mudou</h4>
-                <p className="text-[10px] text-[#003641] leading-relaxed">
-                  {geral.o_que_mudou}
-                </p>
-              </div>
-              <div>
-                <h4 className="text-[10px] font-bold text-[#00AE9D] uppercase mb-1">O que significa para o Sicoob</h4>
-                <p className="text-[10px] font-semibold text-[#003641] mb-1">
-                  Protagonismo: {geral.protagonismo}
-                </p>
-                <p className="text-[10px] text-[#003641] leading-relaxed">
-                  {geral.o_que_significa}
-                </p>
+              <div className="kpi">
+                <div className="k">Acionamentos<br/>de Imprensa</div>
+                <div className="n">{geral.acionamentos_imprensa_card}</div>
               </div>
             </div>
 
-            {/* LINHA 4: Área do Gráfico */}
-            <div className="flex-1 flex flex-col mt-2">
-              <h4 className="text-[10px] font-bold text-[#003641] uppercase mb-2">Menções ao Sicoob por dia de coleta, por rede</h4>
-              <div className="flex-1 bg-slate-50 border border-slate-200 rounded flex items-center justify-center text-[10px] text-slate-400 font-medium">
-                [Área reservada para a renderização do Gráfico de Barras]
+            {/* Textos Analíticos */}
+            <div className="tx-grid">
+              <div className="tx">
+                <div className="l">O que mudou</div>
+                <div className="txt">{geral.o_que_mudou}</div>
+              </div>
+              <div className="tx">
+                <div className="l">O que significa para o Sicoob</div>
+                <div className="protagonismo">Protagonismo: {geral.protagonismo}</div>
+                <div className="txt">{geral.o_que_significa}</div>
+              </div>
+            </div>
+
+            {/* Área do Gráfico */}
+            <div style={{ marginTop: '24px', borderTop: '1px solid #D9E2E3', paddingTop: '16px' }}>
+              <div style={{ color: '#00AE9D', fontWeight: 'bold', fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                Menções ao Sicoob por dia de coleta, por rede
+              </div>
+              <div style={{ height: '180px', marginTop: '12px', border: '1px dashed #D9E2E3', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9AA7AA', fontSize: '12px' }}>
+                [O Gráfico em React será renderizado aqui na próxima etapa]
               </div>
             </div>
 
           </div>
-          
-          {/* Rodapé do Slide */}
-          <div className="px-8 pb-3 flex justify-between items-center text-[8px] text-slate-400 uppercase tracking-wider">
-            <p>Documento interno Sicoob — Não redistribuir fora do ambiente autorizado.</p>
-            <p className="font-bold">1</p>
+
+          {/* Rodapé Padrão */}
+          <div className="foot">
+            <span>Documento interno Sicoob — Não redistribuir fora do ambiente autorizado.</span>
+            <span style={{ fontWeight: 'bold' }}>1</span>
           </div>
+
         </div>
-
       </main>
+
     </div>
   );
 }
