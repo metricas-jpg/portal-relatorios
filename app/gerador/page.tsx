@@ -110,10 +110,10 @@ export default async function GeradorPage() {
         <span className="t wrap z8 c-cinza" style={st('290.9pt', '46.8pt', { width: '229.3pt' })}>{geral.risco_texto}</span>
 
         <div className="card" style={{ position:'absolute', left:'304.9pt', top:'219.6pt', width:'258.1pt', height:'95pt' }}></div>
-        <span class="t z75 b sp c-cinza" style={st('238.6pt', '319.3pt')}>STATUS DA CRISE</span>
-        <span class="t z75 b c-cinza r" style={st('238.6pt', undefined, { right: 'calc(var(--W) - 548.7pt)' })}>→ {geral.status_tendencia}</span>
-        <span class="t z19 b c-roxo" style={st('270.7pt', '319.3pt')}>{geral.status_crise}</span>
-        <span class="t wrap z8 c-cinza" style={st('290.9pt', '319.3pt', { width: '229.3pt' })}>{geral.status_texto}</span>
+        <span className="t z75 b sp c-cinza" style={st('238.6pt', '319.3pt')}>STATUS DA CRISE</span>
+        <span className="t z75 b c-cinza r" style={st('238.6pt', undefined, { right: 'calc(var(--W) - 548.7pt)' })}>→ {geral.status_tendencia}</span>
+        <span className="t z19 b c-roxo" style={st('270.7pt', '319.3pt')}>{geral.status_crise}</span>
+        <span className="t wrap z8 c-cinza" style={st('290.9pt', '319.3pt', { width: '229.3pt' })}>{geral.status_texto}</span>
 
         {/* 4 INDICADORES NUMÉRICOS */}
         <div className="card" style={{ position:'absolute', left:'32.4pt', top:'327.6pt', width:'99.6pt', height:'86.4pt', background:'var(--petroleo)' }}></div>
