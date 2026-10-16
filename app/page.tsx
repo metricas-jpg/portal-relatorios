@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface Relatorio {
   id: string;
@@ -27,6 +28,9 @@ function ConteudoHome() {
   const [erro, setErro] = useState('');
   const [busca, setBusca] = useState('');
   
+  // Estado que define se o usuário atual é da equipe (whitelist)
+  const [isEditor, setIsEditor] = useState(false);
+
   // Ordenação com valor padrão: mais recentes primeiro
   const [ordenacao, setOrdenacao] = useState<TipoOrdenacao>('data-desc');
 
@@ -55,6 +59,7 @@ function ConteudoHome() {
 
   useEffect(() => {
     if (status === 'authenticated') {
+      // 1. Carrega os relatórios do Drive
       async function carregar() {
         try {
           const res = await fetch('/api/relatorios');
@@ -68,7 +73,20 @@ function ConteudoHome() {
           setLoading(false);
         }
       }
+      
+      // 2. Pergunta ao servidor se o e-mail está na whitelist da Planilha
+      async function verificarAcesso() {
+        try {
+          const res = await fetch('/api/check-acesso');
+          const data = await res.json();
+          setIsEditor(data.isAuthorized === true);
+        } catch (e) {
+          console.error('Erro ao verificar permissão do gerador', e);
+        }
+      }
+
       carregar();
+      verificarAcesso();
     }
   }, [status]);
 
@@ -312,6 +330,20 @@ function ConteudoHome() {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* NOVO: Botão de Gerador de Relatório (Aparece apenas se isEditor == true) */}
+            {isEditor && (
+              <Link
+                href="/gerador"
+                className="hidden sm:flex items-center gap-1.5 bg-[#00AE9D] hover:bg-[#008f81] text-white text-xs font-bold py-2 px-4 rounded-full transition-all shadow-sm border border-[#00AE9D]/30"
+                title="Acessar o Gerador de Relatórios"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Novo Relatório
+              </Link>
+            )}
+
             <div className="text-right hidden sm:block">
               <span className="text-[10px] text-slate-300 uppercase tracking-wider block font-medium">
                 Conectado
@@ -549,7 +581,7 @@ function ConteudoHome() {
         {/* Estados de Carregamento e Erro */}
         {loading && (
           <div className="text-center py-20 text-slate-500 text-sm flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-4 border-[#00AE9D] border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-4 border-[#003641] border-t-transparent rounded-full animate-spin"></div>
             Carregando relatórios disponíveis...
           </div>
         )}
@@ -604,7 +636,7 @@ function ConteudoHome() {
                       </div>
                     </div>
 
-                    {/* Informações do Card */}
+                    {/* Informações do Card com Altura e Espaçamento Calibrados */}
                     <div className="p-5 flex-1 flex flex-col justify-between">
                       <div>
                         {/* Pílula de Data */}
