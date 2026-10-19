@@ -13,7 +13,6 @@ function extractId(url: string) {
   return match ? match[0] : '';
 }
 
-// Helper para converter data BR (DD/MM ou DD/MM/YYYY) e hora em Timestamp para ordenação e filtro
 function parseDateBR(str: string) {
   if (!str) return 0;
   const parts = str.split(/[\s,\/h:]+/).filter(Boolean);
@@ -27,7 +26,6 @@ function parseDateBR(str: string) {
 }
 
 export default async function GeradorPage() {
-  // 1. SEGURANÇA BASEADA NO DOMÍNIO
   const session = await getServerSession(authOptions);
   if (!session?.user?.email || !session.user.email.toLowerCase().endsWith('@loggia.com.br')) {
     return (
@@ -39,19 +37,14 @@ export default async function GeradorPage() {
     );
   }
 
-  // 2. BUSCA DE DADOS
   const dados = await obterDadosDoRelatorio();
   const { geral = {}, registros = [], acionamentos = [] } = dados;
 
-  // VERIFICADOR DE ERROS DA PLANILHA
   const alertasDebug: string[] = [];
   if (geral.erro_api) alertasDebug.push(`ERRO DE CONEXÃO: ${geral.erro_api}`);
   if (!geral.titulo_crise && !geral.erro_api) alertasDebug.push('Aba Geral: titulo_crise vazio');
   if (registros.length === 0 && !geral.erro_api) alertasDebug.push('Aba Registro_Central: Nenhum dado preenchido.');
 
-  // =======================================================================
-  // TEXTOS DINÂMICOS & VARIÁVEIS
-  // =======================================================================
   const tituloOrgao = geral.titulo_orgao || 'Presidência - Superintendência Negócios Digitais, Marketing e Experiência do Cooperado';
   const tituloOQueMudou = geral.titulo_o_que_mudou || 'O QUE MUDOU';
   const tituloOQueSignifica = geral.titulo_o_que_significa || 'O QUE SIGNIFICA PARA O SICOOB';
@@ -71,23 +64,12 @@ export default async function GeradorPage() {
   const nivelRisco = (geral.nivel_risco || 'BAIXO').toUpperCase();
   const corRisco = nivelRisco === 'ALTO' ? '#003641' : nivelRisco === 'MÉDIO' ? '#c9d200' : '#7db61c';
 
-  // =======================================================================
-  // MATEMÁTICA AUTOMATIZADA E REGRAS DE NEGÓCIO
-  // =======================================================================
-  
-  // Ignora eventos sem plataforma (Fatos jurídicos etc) para gráficos e menções
   const registrosValidos = registros.filter(r => r.plataforma && r.plataforma !== '-');
-  
-  // Filtra os que Envolvem Sicoob para o Acumulado
   const registrosSicoob = registrosValidos.filter(r => r.envolveSicoob);
 
-  // 1. Menções Gerais ao Tema (Soma todos com plataforma, independente de envolver o Sicoob)
   const mencoesGeraisQtd = registrosValidos.reduce((acc, curr) => acc + (curr.volume || 1), 0);
-
-  // 2. Acumulado Sicoob
   const totalAcumulado = registrosSicoob.reduce((acc, curr) => acc + (curr.volume || 1), 0);
 
-  // 3. Novas Menções (Filtra por Data da Coleta >= Última Atualização)
   let novasMencoesQtd = 0;
   if (inicioMon === ultimaAtualizacao) {
     novasMencoesQtd = totalAcumulado;
@@ -98,34 +80,30 @@ export default async function GeradorPage() {
       .reduce((acc, curr) => acc + (curr.volume || 1), 0);
   }
 
-  // 4. Acionamentos Válidos (Deve ter Data, Veículo, Jornalista e Demanda)
   const acionamentosValidos = acionamentos.filter(a => a.data && a.veiculo && a.jornalista && a.demanda);
   const acionamentosQtd = acionamentosValidos.length;
 
   const platMap: Record<string, number> = { Imprensa: 0, Instagram: 0, 'X/Twitter': 0, Facebook: 0, LinkedIn: 0, YouTube: 0 };
-  registrosSicoob.forEach(r => { platMap[r.plataforma] = (platMap[r.plataforma] || 0) + (r.volume || 1); });
+  registrosSicoob.forEach(r => { 
+    platMap[r.plataforma] = (platMap[r.plataforma] || 0) + (r.volume || 1); 
+  });
 
   const timelineItens = registros.filter(r => r.mostrarTimeline);
   const clippings = registros.filter(r => r.gerarClipping).map((c, i) => ({ ...c, idUnico: `clip_${i}` }));
 
-  // =======================================================================
-  // GRÁFICO RESPONSIVO (Calcula escala máxima para não invadir o texto)
-  // =======================================================================
   const graficoDias = Array.from(new Set(registrosSicoob.map(r => r.dataPost)))
     .filter(d => d && d !== '-' && d.includes('/'))
-    .sort((a, b) => parseDateBR(a) - parseDateBR(b)); // Ordenação Cronológica
+    .sort((a, b) => parseDateBR(a) - parseDateBR(b));
 
   const X0 = 43, X1 = 552.4, BASE = 741.2, LARG = 25.3, MAX_CHART_HEIGHT = 105;
   const passo = graficoDias.length > 0 ? (X1 - X0) / graficoDias.length : 0;
   
-  // Acha o maior volume em um único dia para criar a régua
   let maxDia = 0;
   graficoDias.forEach(dia => {
     const volDia = registrosSicoob.filter(r => r.dataPost === dia).reduce((acc, curr) => acc + (curr.volume || 1), 0);
     if (volDia > maxDia) maxDia = volDia;
   });
 
-  // UNID agora é dinâmico. A barra nunca passará de 105pt de altura!
   const UNID = maxDia > 0 ? Math.min(17.3, MAX_CHART_HEIGHT / maxDia) : 17.3;
   
   const coresPlataforma: Record<string, string> = { Imprensa: 'var(--roxo)', Instagram: 'var(--turquesa)', 'X/Twitter': 'var(--petroleo)', Facebook: 'var(--verde)', LinkedIn: 'var(--lima)', YouTube: 'var(--laranja)' };
@@ -136,6 +114,7 @@ export default async function GeradorPage() {
 
   return (
     <div className="doc">
+      <Script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" strategy="lazyOnload" />
 
       {/* HEADER DE CONTROLE WEB */}
       <header className="print-hidden w-full max-w-[595pt] bg-[#003641] text-white p-4 rounded-xl flex justify-between items-center shadow-lg">
@@ -147,7 +126,7 @@ export default async function GeradorPage() {
         <PrintController clippings={clippings} />
       </header>
 
-      {/* PAINEL DE ALERTA DE ERROS DA PLANILHA */}
+      {/* PAINEL DE ALERTA */}
       {alertasDebug.length > 0 && (
         <div className="print-hidden w-full max-w-[595pt] bg-[#FFF6CC] border border-[#E8D277] text-[#6B5300] p-5 rounded-xl shadow-sm mb-4">
           <h3 className="font-bold text-sm mb-3">Atenção: Houve um problema na leitura da planilha!</h3>
@@ -172,7 +151,6 @@ export default async function GeradorPage() {
         <div className="card" style={{ position:'absolute', left:'32.4pt', top:'219.6pt', width:'258.1pt', height:'95pt' }}></div>
         <span className="t z75 b sp c-cinza" style={st('238.6pt', '46.8pt')}>RISCO PARA A INSTITUIÇÃO</span>
         <span className="t z75 b c-cinza r" style={st('238.6pt', undefined, { right: 'calc(var(--W) - 276.1pt)' })}>→ {geral.risco_tendencia || ''}</span>
-        {/* CORREÇÃO DO RISCO: Cor 100% precisa com o hex mapeado acima */}
         <span className="t z26 b" style={st('273.5pt', '46.8pt', { color: corRisco })}>{nivelRisco}</span>
         <span className="t wrap z8 c-cinza" style={st('290.9pt', '46.8pt', { width: '229.3pt' })}>{geral.risco_texto || ''}</span>
 
@@ -224,8 +202,6 @@ export default async function GeradorPage() {
         <span className="t wrap z9 lh119 c-texto" style={st('509pt', '162pt', { width: '404pt' })}>{geral.o_que_significa || ''}</span>
 
         <span className="t z75 b sp c-pet" style={st('579.9pt', '32.4pt')}>MENÇÕES AO SICOOB POR DIA DE COLETA, POR REDE</span>
-        
-        {/* TEXTO DE TOTAIS NO TOPO DO GRÁFICO */}
         <span className="t z7 i c-cinza r" style={st('579.4pt', undefined, { right: 'calc(var(--W) - 563pt)' })}>
           O total acumulado ({totalAcumulado}) fica no indicador acima, fora do gráfico
         </span>
@@ -243,7 +219,6 @@ export default async function GeradorPage() {
         <span className="t z75 c-texto" style={st('600.9pt', '332.6pt')}>LinkedIn</span>
         <span className="t z75 c-texto" style={st('600.9pt', '402.5pt')}>YouTube</span>
 
-        {/* MOTOR DO GRÁFICO */}
         <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' }}>
           <div style={{ position: 'absolute', left: `${X0}pt`, top: `${BASE - 0.5}pt`, width: `${X1 - X0}pt`, height: '0.99pt', background: 'var(--linha)' }}></div>
           {Array.from({ length: graficoDias.length + 1 }).map((_, i) => (
@@ -299,8 +274,6 @@ export default async function GeradorPage() {
           const baseB = 152.5 + (idx * 36);
           const corPonto = getCorPontoTimeline(item.tonalidade);
           const corTextoTag = getCorTextoTimeline(item.tonalidade);
-          
-          // Correção: Puxa o Texto Timeline especificamente
           const exibicaoTexto = item.textoTimeline || '';
           
           if (item.proximoMarco) return (<div key={`tl-${idx}`} style={st(baseB, undefined, { position: 'static' })}><span className="t z85 b c-roxo tl-data">Próximo</span><i className="dot next"></i><span className="t wrap z85 b c-texto tl-txt">{exibicaoTexto}</span></div>);
@@ -342,7 +315,7 @@ export default async function GeradorPage() {
         <span className="t wrap z9 lh119 c-texto" style={st('231.1pt', '319.3pt', { width: '229.3pt' })}>{geral.centro_pauta || ''}</span>
 
         <span className="t z75 b sp c-pet" style={st('335.1pt', '32.4pt')}>GATILHOS DE ESCALADA</span>
-        {(geral.gatilhos_escalada || '').split('\n').filter(g=>g).map((gatilho, idx) => {
+        {gatilhos.map((gatilho, idx) => {
           const bBase = 356.7 + (idx * 16.8);
           return (
             <div key={`gat-${idx}`} style={st(bBase, undefined, { position: 'static' })}>
@@ -360,4 +333,64 @@ export default async function GeradorPage() {
       {clippings.map((clip, idx) => (
         <section className="page" id={`clipping-page-${clip.idUnico}`} key={clip.idUnico}>
           <div className="bg" style={{ height: '68.4pt' }}></div>
-          <span className="t z12 b c-lima" style={st('30pt
+          <span className="t z12 b c-lima" style={st('30pt', '32.4pt')}>ANEXO · REGISTRO DE PUBLICAÇÃO</span>
+          <span className="t z8 c-branco" style={st('50pt', '32.4pt')}>{titulo.toUpperCase()} · {subtitulo.toUpperCase()} · EDIÇÃO DE {ultimaAtualizacao.toUpperCase()}</span>
+          <img className="logo" src="/logo-sicoob.svg" alt="Sicoob" style={{ position: 'absolute', left: '465.85pt', top: '20.86pt', width: '97.17pt', height: '25.31pt' }} />
+
+          <div style={{ position:'absolute', left:'32.4pt', top:'86.4pt', width:'97.2pt', height:'21.6pt', borderRadius:'10.8pt', background:'var(--roxo)' }}></div>
+          <span className="t z85 b c-branco c" style={st('100.6pt', '32.4pt', { width: '97.2pt' })}>IMPRENSA</span>
+          <span className="t z8 c-cinza r" style={st('98pt', undefined, { right: 'calc(var(--W) - 562.8pt)' })}>Publicação {idx + 1} de {clippings.length}</span>
+          <span className="t z95 b c-turq" style={st('130.5pt', '32.4pt')}>{clip.plataforma || ''}</span>
+          <span className="t wrap z15 lh189 b c-pet" style={st('156.2pt', '32.4pt', { width: '530.6pt' })}>{clip.fato || ''}</span>
+
+          <div className="card" style={{ position:'absolute', left:'32.4pt', top:'195.8pt', width:'126.2pt', height:'43.2pt' }}></div>
+          <div className="card" style={{ position:'absolute', left:'167.2pt', top:'195.8pt', width:'126.2pt', height:'43.2pt' }}></div>
+          <div className="card" style={{ position:'absolute', left:'302pt', top:'195.8pt', width:'126.2pt', height:'43.2pt' }}></div>
+          <div className="card" style={{ position:'absolute', left:'436.8pt', top:'195.8pt', width:'126.2pt', height:'43.2pt' }}></div>
+          
+          <span className="t z65 b c-cinza" style={st('208.1pt', '41.8pt')}>PUBLICAÇÃO</span>
+          <span className="t z9 b c-texto" style={st('225pt', '41.8pt')}>{clip.dataPost || ''}</span>
+          <span className="t z65 b c-cinza" style={st('208.1pt', '176.6pt')}>LINK</span>
+          <span className="t z9 i c-cinza" style={st('225pt', '176.6pt')}>{clip.linkMateria || 'Não informado'}</span>
+          <span className="t z65 b c-cinza" style={st('208.1pt', '311.4pt')}>AUTORIA</span>
+          <span className="t z9 b c-texto" style={st('225pt', '311.4pt')}>{clip.autoria || '--'}</span>
+          <span className="t z65 b c-cinza" style={st('208.1pt', '446.2pt')}>TONALIDADE</span>
+          <span className="t z9 b c-texto" style={st('225pt', '446.2pt')}>{(clip.tonalidade || '').toUpperCase()}</span>
+
+          <div className="tag-print" style={{ left: '31.9pt', width: '165.19pt', borderColor: 'var(--petroleo)' }}></div>
+          <span className="t z7 b c-pet c" style={st('264.1pt', '32.4pt', { width: '164.2pt' })}>PROTAGONISMO: {protagonismo.toUpperCase()}</span>
+
+          <div className="card" style={{ position:'absolute', left:'32.4pt', top:'284.4pt', width:'530.6pt', height:'80.6pt', background:'var(--amarelo)' }}></div>
+          <span className="t z75 b sp c-oliva" style={st('300.5pt', '46.8pt')}>O QUE A MATÉRIA DIZ SOBRE O SICOOB</span>
+          <span className="t wrap z9 lh119 c-texto" style={st('319.7pt', '46.8pt', { width: '501.8pt' })}>{clip.trecho || ''}</span>
+
+          <span className="t z10 b c-cinza c" style={st('546.5pt', '32.4pt', { width: '530.6pt' })}>MATÉRIA NA ÍNTEGRA</span>
+
+          {/* O BLOCO HÍBRIDO (Tela vs Impressão) */}
+          <div style={{ position:'absolute', left:'31.9pt', top:'377.5pt', width:'531.6pt', height:'411.4pt', borderRadius:'5.76pt', overflow:'hidden', border: '1px dashed #A9B5B9', background: '#FAFBFB' }}>
+             
+             <div className="print-hidden w-full h-full flex flex-col items-center justify-center text-slate-400">
+                 {clip.printUrl ? (
+                     <iframe src={`/api/relatorios/file?id=${extractId(clip.printUrl)}`} className="w-full h-full border-none" title="Anexo" />
+                 ) : (
+                     <span className="t z85 c-cinza c mt-4" style={{position:'static'}}>Nenhum anexo fornecido na coluna PRINT.</span>
+                 )}
+             </div>
+
+             <div className="hidden print:block w-full h-full bg-white" id={`print-container-cover-${clip.idUnico}`}>
+                {clip.printUrl && (
+                   <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
+                     <p className="text-[10px] tracking-widest uppercase font-bold" style={{position:'static', textAlign:'center', marginTop:'150px'}}>Renderização em Andamento...</p>
+                   </div>
+                )}
+             </div>
+          </div>
+
+          <span className="t z75 i c-verm rodape">Documento interno · Sicoob — não redistribuir fora do ambiente autorizado.</span>
+          <span className="t z8 c-cinza r num">{3 + idx + 1}</span>
+        </section>
+      ))}
+
+    </div>
+  );
+}
