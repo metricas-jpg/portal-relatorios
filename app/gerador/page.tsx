@@ -2,7 +2,6 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { obterDadosDoRelatorio } from '@/lib/google-sheets';
-import Script from 'next/script';
 import Link from 'next/link';
 import PrintController from './PrintController';
 import './gerador.css';
@@ -14,7 +13,6 @@ function extractId(url: string) {
 }
 
 export default async function GeradorPage() {
-  // 1. SEGURANÇA BASEADA NO DOMÍNIO
   const session = await getServerSession(authOptions);
   if (!session?.user?.email || !session.user.email.toLowerCase().endsWith('@loggia.com.br')) {
     return (
@@ -26,13 +24,14 @@ export default async function GeradorPage() {
     );
   }
 
-  // 2. BUSCA DE DADOS & FALLBACKS
   const dados = await obterDadosDoRelatorio();
   const { geral = {}, registros = [], acionamentos = [] } = dados;
 
+  // VERIFICADOR DE ERROS DA PLANILHA (Impede o crash da tela)
   const alertasDebug: string[] = [];
-  if (!geral.titulo_crise) alertasDebug.push('Aba Geral: titulo_crise');
-  if (registros.length === 0) alertasDebug.push('Aba Registro_Central: Nenhum dado preenchido.');
+  if (geral.erro_api) alertasDebug.push(`ERRO DE CONEXÃO: ${geral.erro_api}`);
+  if (!geral.titulo_crise && !geral.erro_api) alertasDebug.push('Aba Geral: titulo_crise vazio');
+  if (registros.length === 0 && !geral.erro_api) alertasDebug.push('Aba Registro_Central: Nenhum dado preenchido.');
 
   const titulo = geral.titulo_crise || 'TÍTULO NÃO DEFINIDO';
   const subtitulo = geral.subtitulo_unidade || 'UNIDADE NÃO DEFINIDA';
@@ -55,7 +54,6 @@ export default async function GeradorPage() {
   const gatilhos = (geral.gatilhos_escalada || '').split('\n').filter(g => g.trim() !== '');
   const nivelRisco = geral.nivel_risco || 'BAIXO';
 
-  // 3. MATEMÁTICA E AGRUPAMENTOS
   const totalAcumulado = registros.reduce((acc, curr) => acc + (curr.volume || 1), 0);
   const platMap: Record<string, number> = { Imprensa: 0, Instagram: 0, 'X/Twitter': 0, Facebook: 0, LinkedIn: 0, YouTube: 0 };
   registros.forEach(r => { if (r.plataforma && r.plataforma !== '-') platMap[r.plataforma] = (platMap[r.plataforma] || 0) + (r.volume || 1); });
@@ -75,10 +73,8 @@ export default async function GeradorPage() {
 
   return (
     <div className="doc">
-      {/* Script Oficial do PDF.js */}
-      <Script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" strategy="lazyOnload" />
 
-      {/* BARRA SUPERIOR WEB */}
+      {/* HEADER DE CONTROLE WEB */}
       <header className="print-hidden w-full max-w-[595pt] bg-[#003641] text-white p-4 rounded-xl flex justify-between items-center shadow-lg">
         <div className="flex gap-4 items-center">
           <Link href="/" className="text-sm text-slate-300 hover:text-white">← Voltar</Link>
@@ -88,12 +84,14 @@ export default async function GeradorPage() {
         <PrintController clippings={clippings} />
       </header>
 
+      {/* PAINEL DE ALERTA DE ERROS DA PLANILHA */}
       {alertasDebug.length > 0 && (
-        <div className="print-hidden w-full max-w-[595pt] bg-[#FFF6CC] border border-[#E8D277] text-[#6B5300] p-4 rounded-xl shadow-sm mb-4">
-          <h3 className="font-bold text-sm mb-2">Faltam dados na Planilha</h3>
-          <ul className="text-[11px] grid grid-cols-2 gap-1 list-disc pl-5 opacity-80 font-mono">
-            {alertasDebug.map((alerta, i) => (<li key={i}>{alerta}</li>))}
+        <div className="print-hidden w-full max-w-[595pt] bg-[#FFF6CC] border border-[#E8D277] text-[#6B5300] p-5 rounded-xl shadow-sm mb-4">
+          <h3 className="font-bold text-sm mb-3">Atenção: Houve um problema na leitura da planilha!</h3>
+          <ul className="text-xs grid grid-cols-1 gap-1.5 list-disc pl-5 font-mono bg-white/50 p-3 rounded border border-[#E8D277]/50">
+            {alertasDebug.map((alerta, i) => (<li key={i} className="font-semibold text-red-600">{alerta}</li>))}
           </ul>
+          <p className="text-xs mt-3 opacity-90">O relatório abaixo está carregando com dados vazios para não quebrar a tela. Corrija o erro e recarregue a página.</p>
         </div>
       )}
 
@@ -154,6 +152,7 @@ export default async function GeradorPage() {
 
         <span className="t z85 b c-turq" style={st('440.5pt', '32.4pt')}>O QUE MUDOU</span>
         <span className="t wrap z9 lh119 c-texto" style={st('442.1pt', '162pt', { width: '404pt' })}>{geral.o_que_mudou || ''}</span>
+        
         <div style={{ position:'absolute', left:'32.4pt', top: '492.83pt', width: '530.6pt', height: '.74pt', background: 'var(--linha)' }}></div>
         
         <span className="t z85 b c-turq" style={st('507.4pt', '32.4pt')}>O QUE SIGNIFICA<br/>PARA O SICOOB</span>
@@ -183,6 +182,7 @@ export default async function GeradorPage() {
             const itensDoDia = registros.filter(r => r.dataPost === dia && r.plataforma !== '-');
             const x = X0 + passo * i + (passo - LARG) / 2;
             let topo = BASE; let totalDoDia = 0;
+
             return (
               <div key={`dia-${dia}`}>
                 {itensDoDia.map((item, idx) => {
@@ -249,7 +249,7 @@ export default async function GeradorPage() {
         <span className="t z8 c-cinza r num">2</span>
       </section>
 
-      {/* ================= PÁGINA 3: CONTEXTO ================= */}
+      {/* PÁGINA 3: CONTEXTO */}
       <section className="page" id="p3">
         <div className="bg" style={{ height: '68.4pt' }}></div>
         <span className="t z12 b c-lima" style={st('30pt', '32.4pt')}>CONTEXTO DO CASO</span>
@@ -283,7 +283,7 @@ export default async function GeradorPage() {
         <span className="t z8 c-cinza r num">3</span>
       </section>
 
-      {/* ================= PÁGINAS 4+: CLIPPING (HÍBRIDO) ================= */}
+      {/* PÁGINAS 4+: CLIPPING DINÂMICO (Híbrido) */}
       {clippings.map((clip, idx) => (
         <section className="page" id={`clipping-page-${clip.idUnico}`} key={clip.idUnico}>
           <div className="bg" style={{ height: '68.4pt' }}></div>
@@ -318,22 +318,25 @@ export default async function GeradorPage() {
           <span className="t z75 b sp c-oliva" style={st('300.5pt', '46.8pt')}>O QUE A MATÉRIA DIZ SOBRE O SICOOB</span>
           <span className="t wrap z9 lh119 c-texto" style={st('319.7pt', '46.8pt', { width: '501.8pt' })}>{clip.trecho || ''}</span>
 
+          <span className="t z10 b c-cinza c" style={st('546.5pt', '32.4pt', { width: '530.6pt' })}>MATÉRIA NA ÍNTEGRA</span>
+
           {/* O BLOCO HÍBRIDO (Tela vs Impressão) */}
           <div style={{ position:'absolute', left:'31.9pt', top:'377.5pt', width:'531.6pt', height:'411.4pt', borderRadius:'5.76pt', overflow:'hidden', border: '1px dashed #A9B5B9', background: '#FAFBFB' }}>
-             {/* Visível na Tela (Iframe leve) */}
+             
+             {/* Visível na Tela */}
              <div className="print-hidden w-full h-full flex flex-col items-center justify-center text-slate-400">
                  {clip.printUrl ? (
                      <iframe src={`/api/relatorios/file?id=${extractId(clip.printUrl)}`} className="w-full h-full border-none" title="Anexo" />
                  ) : (
-                     <span className="t z85 c-cinza c mt-4">Nenhum anexo fornecido na coluna PRINT.</span>
+                     <span className="t z85 c-cinza c mt-4" style={{position:'static'}}>Nenhum anexo fornecido na coluna PRINT.</span>
                  )}
              </div>
 
-             {/* Oculto na Tela, Visível no PDF (Injetado pelo PrintController) */}
+             {/* Oculto na Tela, Visível no PDF */}
              <div className="hidden print:block w-full h-full bg-white" id={`print-container-cover-${clip.idUnico}`}>
                 {clip.printUrl && (
                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
-                     <p className="text-[10px] tracking-widest uppercase font-bold">Aguardando Conversão...</p>
+                     <p className="text-[10px] tracking-widest uppercase font-bold" style={{position:'static', textAlign:'center', marginTop:'150px'}}>Renderização em Andamento...</p>
                    </div>
                 )}
              </div>
@@ -343,6 +346,7 @@ export default async function GeradorPage() {
           <span className="t z8 c-cinza r num">{3 + idx + 1}</span>
         </section>
       ))}
+
     </div>
   );
 }

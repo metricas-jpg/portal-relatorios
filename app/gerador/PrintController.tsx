@@ -1,11 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-declare global {
-  interface Window {
-    pdfjsLib: any;
-  }
-}
+declare global { interface Window { pdfjsLib: any; } }
 
 export default function PrintController({ clippings }: { clippings: any[] }) {
   const [loading, setLoading] = useState(false);
@@ -18,16 +14,30 @@ export default function PrintController({ clippings }: { clippings: any[] }) {
     return match ? match[0] : null;
   };
 
+  // Carrega a biblioteca de conversão de PDF de forma segura
+  const loadPdfJs = async () => {
+    if (window.pdfjsLib) return;
+    return new Promise<void>((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Falha ao baixar o conversor'));
+      document.head.appendChild(script);
+    });
+  };
+
   const handlePrint = async () => {
-    if (!window.pdfjsLib) {
-      alert('Aguarde o carregamento do conversor de arquivos e tente novamente.');
+    setLoading(true);
+    try {
+      await loadPdfJs();
+    } catch (e) {
+      alert('Houve um erro de rede ao tentar carregar o conversor de PDF. Tente novamente.');
+      setLoading(false);
       return;
     }
     
-    // Configura o motor do PDF
     window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    setLoading(true);
     const clipsComAnexo = clippings.filter(c => c.printUrl);
     setTotal(clipsComAnexo.length);
     let current = 0;
@@ -47,22 +57,14 @@ export default function PrintController({ clippings }: { clippings: any[] }) {
         const res = await fetch(`/api/relatorios/file?id=${id}&download=true`);
         const blob = await res.blob();
 
-        // =========================================================================
-        // 1. SE FOR IMAGEM (PNG / JPEG) - LÓGICA DE FATIAMENTO (SLICING)
-        // =========================================================================
         if (blob.type.includes('image')) {
           const url = URL.createObjectURL(blob);
-          
-          // Carrega a imagem em memória para analisar largura e altura
           const img = new Image();
           img.src = url;
           await new Promise(resolve => { img.onload = resolve; });
 
-          // Proporção matemática da caixa no CSS (531.6pt de L x 411.4pt de A)
-          // Altura máxima que cabe em 1 página mantendo a largura 100% esticada
           const sliceHeight = img.width * (411.4 / 531.6); 
 
-          // Regra de tolerância de 15%. Se passar disso, é um print longo e vamos fatiar!
           if (img.height > sliceHeight * 1.15) {
             const totalSlices = Math.ceil(img.height / sliceHeight);
             let insertAfterNode = clippingPageNode;
@@ -70,31 +72,18 @@ export default function PrintController({ clippings }: { clippings: any[] }) {
             for (let i = 0; i < totalSlices; i++) {
               const canvas = document.createElement('canvas');
               const ctx = canvas.getContext('2d')!;
-              canvas.width = img.width;
-              canvas.height = sliceHeight;
-
-              // Preenche fundo de branco para sobras do último corte
-              ctx.fillStyle = '#ffffff';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-              // Calcula o corte (crop)
+              canvas.width = img.width; canvas.height = sliceHeight;
+              ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+              
               const sourceY = i * sliceHeight;
               const currentSliceHeight = Math.min(sliceHeight, img.height - sourceY);
-
-              // Desenha exatamente aquele pedaço da imagem no canvas
-              ctx.drawImage(
-                img,
-                0, sourceY, img.width, currentSliceHeight, // Pega da Imagem Original
-                0, 0, img.width, currentSliceHeight        // Joga no Canvas Destino
-              );
+              ctx.drawImage(img, 0, sourceY, img.width, currentSliceHeight, 0, 0, img.width, currentSliceHeight);
 
               const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
               if (i === 0) {
-                // Primeira fatia entra na caixa original do anexo (com metadados em cima)
                 coverContainer.innerHTML = `<img src="${dataUrl}" style="width:100%; height:100%; object-fit:contain;" />`;
               } else {
-                // Fatias seguintes geram novas folhas A4 limpas
                 const newSection = document.createElement('section');
                 newSection.className = 'page custom-print-page';
                 newSection.innerHTML = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#fff;"><img src="${dataUrl}" style="max-width:100%; max-height:100%; object-fit:contain;" /></div>`;
@@ -103,22 +92,16 @@ export default function PrintController({ clippings }: { clippings: any[] }) {
               }
             }
           } else {
-            // Se for imagem curta/quadrada, renderiza normalmente em 1 página
             coverContainer.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain;" />`;
           }
-
           coverContainer.dataset.processed = 'true';
           continue;
         }
 
-        // =========================================================================
-        // 2. SE FOR PDF (Conversão de Múltiplas Páginas)
-        // =========================================================================
         const arrayBuffer = await blob.arrayBuffer();
         const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         coverContainer.innerHTML = ''; 
 
-        // Processa Página 1 do PDF
         const page1 = await pdf.getPage(1);
         const viewport1 = page1.getViewport({ scale: 2.0 });
         const canvas1 = document.createElement('canvas');
@@ -128,7 +111,6 @@ export default function PrintController({ clippings }: { clippings: any[] }) {
         await page1.render({ canvasContext: ctx1, viewport: viewport1 }).promise;
         coverContainer.innerHTML = `<img src="${canvas1.toDataURL('image/jpeg', 0.95)}" style="width:100%; height:100%; object-fit:contain;" />`;
 
-        // Processa Páginas 2 em diante gerando folhas A4 completas
         let insertAfterNode = clippingPageNode;
         for (let pageNum = 2; pageNum <= pdf.numPages; pageNum++) {
           const page = await pdf.getPage(pageNum);
@@ -165,7 +147,6 @@ export default function PrintController({ clippings }: { clippings: any[] }) {
         <span className="sm:hidden">Gerar Relatório</span>
       </button>
 
-      {/* TELA DE LOADING */}
       {loading && (
         <div className="print-hidden fixed inset-0 bg-[#003641]/95 z-[9999] flex flex-col items-center justify-center text-white backdrop-blur-sm">
           <div className="w-14 h-14 border-4 border-[#00AE9D] border-t-transparent rounded-full animate-spin mb-6"></div>
