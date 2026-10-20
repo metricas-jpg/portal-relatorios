@@ -39,6 +39,8 @@ app/gerador/gerador.css     layout A4 (medidas em pt, iguais ao modelo original)
 
 **Layout misto.** A página 1 e os cabeçalhos têm posições fixas, iguais ao modelo. Os textos variáveis da página 1 têm limite de linhas; se passarem, são cortados com "…" e aparecem no painel de avisos. As páginas 2 e 3 e os anexos fluem: linha do tempo, tabela de acionamentos e gatilhos continuam numa nova página com o título "(continuação)". A numeração das páginas é automática.
 
+**Página 1 elástica.** "O que mudou" (ideal: 4 linhas) e "O que significa para o Sicoob" (ideal: 5 linhas) podem crescer juntos até 8 linhas a mais. O espaço sai, nesta ordem, dos espaços em branco do cabeçalho, dos espaços entre os cards e dentro deles e, por último, da altura das barras do gráfico; as fontes não mudam (`AjustePagina1.tsx`). O painel avisa quando o texto passa do ideal e quando passa do máximo, com a quantidade de caracteres a retirar. Nenhum aviso sai na impressão.
+
 ### Campos de `Configuracoes_Gerais`
 
 Obrigatórios: `titulo_crise`, `subtitulo_unidade`, `inicio_monitoramento`, `ultima_atualizacao`, `nivel_risco`, `risco_texto`, `status_crise`, `status_texto`, `o_que_mudou`, `o_que_significa`, `protagonismo`, `analise_caso`, `papel_sicoob`, `centro_pauta`, `gatilhos_escalada` (um por linha).
