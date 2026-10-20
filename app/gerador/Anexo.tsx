@@ -128,7 +128,8 @@ export default function Anexo({ clip, indice, total, linha, protagonismo }: Prop
         <CabecalhoInterno titulo="ANEXO · REGISTRO DE PUBLICAÇÃO" linha={linha} />
         <div className="corpo-anexo">
           {topo(1)}
-          {clip.veiculo && <div className="veiculo">{clip.veiculo}</div>}
+          {/* em redes sociais o nome da rede já está na etiqueta roxa; nas continuações a linha verde continua */}
+          {clip.veiculo && imprensa && <div className="veiculo">{clip.veiculo}</div>}
           <div className="anexo-tit">{vazio(clip.titulo, '[Título da publicação]')}</div>
           <div className="meta3">
             <div><div className="k">PUBLICAÇÃO</div><div className="v">{vazio(clip.dataPost, '—')}</div></div>
