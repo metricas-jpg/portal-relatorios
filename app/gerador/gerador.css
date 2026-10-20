@@ -1,36 +1,66 @@
 @import url('https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
-/* Variáveis do Relatório e Resete da Página A4 */
-.doc { 
+/*
+  Relatório de Monitoramento de Crise — A4 retrato, medidas em pt (as mesmas do PDF original).
+
+  Layout misto:
+  - Página 1 e cabeçalhos: posições fixas medidas no original. Cada texto é posicionado pela
+    LINHA DE BASE (--b); a fórmula em .t converte a linha de base em "top" usando as métricas da
+    fonte (ascendente 0,9053 em; área de conteúdo 1,1172 em). Textos variáveis têm limite de
+    linhas (.lim) e, se passarem, aparecem no painel de avisos.
+  - Páginas 2, 3 e anexos: o conteúdo flui (.corpo) e as margens reproduzem os espaços do
+    original. O Paginador cria páginas de continuação quando o conteúdo não cabe.
+*/
+
+.doc {
   --petroleo: #003641; --turquesa: #00AE9D; --lima: #C9D200; --roxo: #49479D;
   --verde: #7DB61C; --laranja: #D9962B; --vermelho: #B23A3A; --verde-escuro: #4E8A12;
   --texto: #1E2B30; --cinza: #5B6B70; --cinza-claro: #A9B5B9; --cinza-tom: #6B7A80;
   --neutra: #7F8F95; --aclass: #C3CDD0; --linha: #D5DDE0;
-  --card: #EEF2F3; --zebra: #F6F8F9; --amarelo: #F4F7CC; --oliva: #5E6300;
+  --card: #EEF2F3; --zebra: #F6F8F9; --amarelo: #F4F7CC; --oliva: #5E6300; --area-print: #FAFBFB;
   --font: "Arimo", "Liberation Sans", Arial, Helvetica, sans-serif;
   --W: 595.45pt; --H: 841.69pt;
 
-  font-family: var(--font); 
-  color: var(--texto); 
-  -webkit-font-smoothing: antialiased; 
-  background: #E4E9EB; 
+  font-family: var(--font);
+  color: var(--texto);
+  -webkit-font-smoothing: antialiased;
+  background: #E4E9EB;
   min-height: 100vh;
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
-  gap: 24px; 
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
   padding: 24px 16px;
+  counter-reset: pagina;
 }
+.doc *, .doc *::before, .doc *::after { box-sizing: border-box; }
 
-.doc .page { position: relative; width: var(--W); height: var(--H); background: #fff; overflow: hidden; box-shadow: 0 2px 12px rgba(0,40,50,.18); flex: none; }
+/* ---------- folha A4 ---------- */
+.doc .page, .doc .folha-medida {
+  position: relative; width: var(--W); height: var(--H); background: #fff; overflow: hidden; flex: none;
+}
+.doc .page { box-shadow: 0 2px 12px rgba(0,40,50,.18); counter-increment: pagina; }
 .doc .page > * { position: absolute; }
+.doc .folha-medida { position: absolute; left: -20000px; top: 0; visibility: hidden; pointer-events: none; }
 
-.doc .t { position: absolute; white-space: pre; font-size: var(--fs); line-height: var(--lh); --lh: calc(var(--fs) * 1.2); top: calc(var(--b) + var(--dy, 0pt) - var(--fs) * .9053 - (var(--lh) - var(--fs) * 1.1172) / 2); }
+/* ---------- texto pela linha de base ---------- */
+.doc .t {
+  position: absolute; white-space: pre; font-size: var(--fs); line-height: var(--lh);
+  --lh: calc(var(--fs) * 1.2);
+  top: calc(var(--b) + var(--dy, 0pt) - var(--fs) * .9053 - (var(--lh) - var(--fs) * 1.1172) / 2);
+}
 .doc .t.wrap { white-space: pre-wrap; }
 .doc .t.r { text-align: right; }
 .doc .t.c { text-align: center; }
 
-/* Tipografia */
+/* limite de linhas: corta com "…" e é verificado pelo painel de avisos */
+.doc .lim {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--linhas, 1);
+  overflow: hidden; white-space: pre-wrap; max-height: calc(var(--lh) * var(--linhas, 1));
+}
+.doc .lim1 { white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+
+/* tipografia */
 .doc .z65{--fs:6.5pt} .doc .z7{--fs:7pt} .doc .z75{--fs:7.5pt} .doc .z8{--fs:8pt} .doc .z85{--fs:8.5pt} .doc .z9{--fs:9pt}
 .doc .z95{--fs:9.5pt} .doc .z10{--fs:10pt} .doc .z11{--fs:11pt} .doc .z12{--fs:12pt} .doc .z13{--fs:13pt} .doc .z15{--fs:15pt}
 .doc .z19{--fs:19pt} .doc .z24{--fs:24pt} .doc .z26{--fs:26pt}
@@ -38,42 +68,130 @@
 .doc .sp { letter-spacing: .54pt; }
 .doc .lh119{--lh:11.9pt} .doc .lh145{--lh:14.5pt} .doc .lh189{--lh:18.9pt}
 
-/* Cores */
+/* cores */
 .doc .c-branco{color:#fff} .doc .c-lima{color:var(--lima)} .doc .c-turq{color:var(--turquesa)} .doc .c-pet{color:var(--petroleo)}
 .doc .c-texto{color:var(--texto)} .doc .c-cinza{color:var(--cinza)} .doc .c-claro{color:var(--cinza-claro)}
 .doc .c-verm{color:var(--vermelho)} .doc .c-roxo{color:var(--roxo)} .doc .c-neutra{color:var(--neutra)}
 .doc .c-oliva{color:var(--oliva)} .doc .c-tom{color:var(--cinza-tom)} .doc .c-verde{color:var(--verde-escuro)}
 
-/* Formas e Tabelas */
+/* formas */
 .doc .bg { left: 0; top: 0; width: 100%; background: var(--petroleo); }
 .doc .card { background: var(--card); border-radius: 5.76pt; }
 .doc .sq { width: 7.2pt; height: 7.2pt; }
 .doc .logo { display: block; }
+
+/* coluna esquerda das seções "O que mudou" / "O que significa" (página 1) */
+.doc .col-esq { left: 32.4pt; width: 120pt; display: flex; flex-direction: column; }
+.doc .col-esq .tit { font: 700 8.5pt/10.2pt var(--font); color: var(--turquesa); max-width: 96pt; text-transform: uppercase; --lh: 10.2pt; }
+.doc .col-esq .prot { font: italic 7pt/8.4pt var(--font); color: var(--cinza); margin-top: 8.32pt; --lh: 8.4pt; }
+
+/* rodapé e numeração automática (conta também as páginas de continuação e de prints) */
 .doc .rodape { left: 32.4pt; --b: 819.1pt; }
 .doc .num { right: calc(var(--W) - 556pt); --b: 818.6pt; }
+.doc .num::before { content: counter(pagina); }
 
-.doc .tl-data{right:calc(var(--W) - 97.2pt)} .doc .tl-txt{left:133.2pt;width:350pt} .doc .tl-tag{right:calc(var(--W) - 563pt);--dy:-1.5pt}
-.doc .dot{position:absolute;border-radius:50%;left:calc(113.75pt - var(--d) / 2);top:calc(var(--b) - 1.3pt - var(--d) / 2);width:var(--d);height:var(--d)}
-.doc .dot.g{--d:11.5pt} .doc .dot.p{--d:9.85pt;background:#fff;border:1.25pt solid var(--cinza-claro)}
-.doc .dot.next{--d:12.75pt;background:#fff;border:1.25pt solid var(--roxo)}
-.doc .dot.neg{background:var(--vermelho)} .doc .dot.neu{background:var(--neutra)}
-.doc .dot.pos{background:var(--verde-escuro)} .doc .dot.acl{background:var(--aclass)}
-.doc .lg-dot{width:8.6pt;height:8.6pt;border-radius:50%;top:117.3pt}
-.doc .lg-dot.o{width:9.85pt;height:9.85pt;top:116.68pt;background:#fff;border:1.25pt solid var(--cinza-claro)}
+/* ======================= páginas em fluxo (2, 3 e continuações) ======================= */
+.doc .corpo { left: 32.4pt; top: 87.09pt; width: 530.6pt; height: 712.9pt; overflow: hidden; }
+.doc .corpo > :first-child, .doc .corpo > .bloco:first-child > :first-child { margin-top: 0 !important; }
 
-.doc .tab{left:32.4pt;top:536.4pt;width:530.6pt;border-collapse:collapse;table-layout:fixed;font-size:8pt}
-.doc .tab th, .doc .tab td{border:.45pt solid var(--linha);padding:0 0 0 4.3pt;vertical-align:middle;text-align:left;line-height:9pt;overflow:hidden}
-.doc .tab th{background:var(--petroleo);color:#fff;font-weight:700;height:17.7pt}
-.doc .tab td{height:26.7pt;font-style:italic;color:var(--cinza);padding-right:4.3pt}
-.doc .tab tbody tr:nth-child(even) td{background:var(--zebra)}
-.doc .tag-print{height:19.69pt;border:.99pt solid;border-radius:9.85pt;background:#fff;top:251.5pt;position:absolute;}
+.doc .h2 { font: 700 13pt/15.6pt var(--font); color: var(--turquesa); text-transform: uppercase; }
+.doc .h2 .cont { font-weight: 400; font-size: 9pt; color: var(--cinza); text-transform: none; font-style: italic; }
+.doc .h2.secao2 { margin-top: 18.24pt; }
+.doc .nota { font: italic 8pt/9.6pt var(--font); color: var(--cinza); margin-top: 11.44pt; }
 
+/* legenda da linha do tempo */
+.doc .tl-leg { position: relative; height: 9pt; margin-top: 14.91pt; font: 7.5pt/9pt var(--font); color: var(--cinza); white-space: nowrap; }
+.doc .tl-leg > * { position: absolute; top: 0; }
+.doc .tl-leg .ponto { width: 8.6pt; height: 8.6pt; border-radius: 50%; top: -.3pt; }
+.doc .tl-leg .ponto.o { width: 9.85pt; height: 9.85pt; top: -.92pt; background: #fff; border: 1.25pt solid var(--cinza-claro); }
+
+/* linha do tempo: cada item tem no mínimo 36pt (como no original) e cresce se o texto for longo */
+.doc .tl { margin-top: 17.85pt; }
+.doc .tl-row {
+  position: relative; min-height: 36pt; padding: 0 79.8pt 15.6pt 100.8pt;
+  font: 8.5pt/10.2pt var(--font); color: var(--texto); break-inside: avoid;
+}
+.doc .tl-row .data { position: absolute; left: 0; top: 0; width: 64.8pt; text-align: right; font-weight: 700; color: var(--petroleo); }
+.doc .tl-row .txt { white-space: pre-wrap; }
+.doc .tl-row .tag { position: absolute; right: 0; top: 0; font: 700 7pt/8.4pt var(--font); }
+.doc .tl-row .ponto {
+  position: absolute; border-radius: 50%; z-index: 1;
+  left: calc(81.35pt - var(--d) / 2); top: calc(6.75pt - var(--d) / 2); width: var(--d); height: var(--d);
+}
+.doc .tl > .tl-item:not(:last-child) > .tl-row::after {
+  content: ""; position: absolute; left: 80.6pt; top: 6.75pt; width: 1.5pt; height: 100%; background: var(--linha);
+}
+.doc .ponto.g { --d: 11.5pt; }
+.doc .ponto.p { --d: 9.85pt; background: #fff; border: 1.25pt solid var(--cinza-claro); }
+.doc .ponto.next { --d: 12.75pt; background: #fff; border: 1.25pt solid var(--roxo); }
+.doc .ponto.neg { background: var(--vermelho); } .doc .ponto.neu { background: var(--neutra); }
+.doc .ponto.pos { background: var(--verde-escuro); } .doc .ponto.acl { background: var(--aclass); }
+.doc .tl-row.ctx .txt { color: var(--cinza); }
+.doc .tl-row.next .data { color: var(--roxo); }
+.doc .tl-row.next .txt { font-weight: 700; }
+
+/* tabela de acionamentos */
+.doc .tab { width: 530.6pt; border-collapse: collapse; table-layout: fixed; font: 8pt/9pt var(--font); margin-top: 13.07pt; }
+.doc .tab th, .doc .tab td { border: .45pt solid var(--linha); padding: 0 4.3pt; vertical-align: middle; text-align: left; overflow-wrap: anywhere; }
+.doc .tab th { background: var(--petroleo); color: #fff; font-weight: 700; height: 17.7pt; }
+.doc .tab td { height: 26.7pt; color: var(--texto); padding-block: 4pt; }
+.doc .tab tbody:nth-of-type(even) td { background: var(--zebra); }
+.doc .tab tr { break-inside: avoid; }
+
+.doc .leitura { display: grid; grid-template-columns: 54pt 1fr; margin-top: 21.55pt; }
+.doc .leitura b { font: 700 7.5pt/9pt var(--font); color: var(--turquesa); padding-top: .05pt; }
+.doc .leitura span { font: italic 8.5pt/10.2pt var(--font); color: var(--cinza); white-space: pre-wrap; }
+
+/* página 3 */
+.doc .ref { font: italic 7.5pt/9pt var(--font); color: var(--cinza); margin-top: 9.31pt; }
+.doc .manchete { font: 700 11pt/14.5pt var(--font); color: var(--petroleo); margin-top: 17.04pt; white-space: pre-wrap; }
+.doc .cards2 { display: grid; grid-template-columns: 258.1pt 258.1pt; gap: 14.4pt; margin-top: 23.76pt; }
+.doc .cards2 > div { background: var(--card); border-radius: 5.76pt; min-height: 115.2pt; padding: 11.9pt 14.4pt 14.4pt; }
+.doc .rot { font: 700 7.5pt/9pt var(--font); letter-spacing: .54pt; color: var(--turquesa); text-transform: uppercase; }
+.doc .cards2 p { font: 9pt/11.9pt var(--font); color: var(--texto); margin: 10.33pt 0 0; white-space: pre-wrap; }
+.doc .rot.pet { color: var(--petroleo); margin-top: 22pt; }
+.doc .gat { margin-top: 12.13pt; }
+.doc .gat-item { position: relative; padding-left: 12pt; font: 9pt/11.9pt var(--font); color: var(--texto); white-space: pre-wrap; }
+.doc .gat-item + .gat-item { margin-top: 4.93pt; }
+.doc .gat-item::before { content: "•"; position: absolute; left: 0; top: -1.5pt; }
+
+/* ======================= anexo (registro de publicação) ======================= */
+.doc .corpo-anexo { left: 32.4pt; top: 86.4pt; width: 530.6pt; bottom: 52.79pt; display: flex; flex-direction: column; }
+.doc .anexo-topo { display: flex; justify-content: space-between; align-items: flex-start; }
+.doc .pilula { height: 21.6pt; min-width: 97.2pt; padding: 0 18pt; border-radius: 10.8pt; background: var(--roxo); color: #fff;
+  font: 700 8.5pt/21.6pt var(--font); text-align: center; text-transform: uppercase; }
+.doc .anexo-topo .pos { font: 8pt/9.6pt var(--font); color: var(--cinza); margin-top: 4.03pt; white-space: pre; }
+.doc .veiculo { font: 700 9.5pt/11.4pt var(--font); color: var(--turquesa); margin-top: 13.5pt; }
+.doc .anexo-tit { font: 700 15pt/18.9pt var(--font); color: var(--petroleo); margin-top: 8.65pt;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.doc .meta4 { display: grid; grid-template-columns: repeat(4, 126.2pt); gap: 8.6pt; margin-top: 16.45pt; }
+.doc .meta4 > div { background: var(--card); border-radius: 5.76pt; height: 43.2pt; padding: 6.15pt 9.4pt 0; min-width: 0; }
+.doc .meta4 .k { font: 700 6.5pt/7.8pt var(--font); color: var(--cinza); }
+.doc .meta4 .v { font: 700 9pt/10.8pt var(--font); color: var(--texto); margin-top: 6.73pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc .meta4 .v.link { font-weight: 400; font-style: italic; color: var(--cinza); }
+.doc .meta4 .v a { color: inherit; text-decoration: none; }
+.doc .tags { display: flex; gap: 8.6pt; margin-top: 12.5pt; }
+.doc .tags span { height: 19.69pt; padding: 0 18.7pt; border: .99pt solid; border-radius: 9.85pt; background: #fff;
+  font: 700 7pt/17.71pt var(--font); text-transform: uppercase; white-space: nowrap; }
+.doc .resumo { background: var(--amarelo); border-radius: 5.76pt; min-height: 80.6pt; padding: 9pt 14.4pt 14.4pt; margin-top: 13.21pt; flex: none; }
+.doc .resumo .rot { color: var(--oliva); }
+.doc .resumo p { font: 9pt/11.9pt var(--font); color: var(--texto); margin: 8.23pt 0 0; white-space: pre-wrap;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 8; overflow: hidden; }
+.doc .area-print { position: relative; flex: 1; min-height: 120pt; margin-top: 13pt; border-radius: 5.76pt; background: var(--area-print); overflow: hidden; }
+.doc .area-print > svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+.doc .area-print > svg rect { x: .495pt; y: .495pt; width: calc(100% - .99pt); height: calc(100% - .99pt); }
+.doc .area-print .vazio { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; color: var(--cinza); font: 8.5pt/10.2pt var(--font); padding: 0 80pt; }
+.doc .area-print .vazio b { font: 700 10pt/12pt var(--font); margin-bottom: 17pt; }
+
+/* ======================= impressão ======================= */
 @media print {
   @page { size: A4; margin: 0; }
   html, body { background: #fff !important; }
   .doc { display: block; padding: 0; background: #fff; }
   .doc .page { box-shadow: none; break-after: page; page-break-after: always; }
-  .doc .page:last-child { break-after: auto; page-break-after: auto; }
+  .doc .page:last-of-type { break-after: auto; page-break-after: auto; }
+  .doc .folha-medida { display: none; }
   .print-hidden { display: none !important; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }

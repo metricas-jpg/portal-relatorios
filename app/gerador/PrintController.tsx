@@ -63,7 +63,10 @@ export default function PrintController({ clippings }: { clippings: any[] }) {
           img.src = url;
           await new Promise(resolve => { img.onload = resolve; });
 
-          const sliceHeight = img.width * (411.4 / 531.6); 
+          // proporção real da área do print nesta página (ela encolhe quando o resumo é longo)
+          const area = coverContainer.parentElement;
+          const proporcao = area && area.clientWidth ? area.clientHeight / area.clientWidth : 411.4 / 531.6;
+          const sliceHeight = img.width * proporcao;
 
           if (img.height > sliceHeight * 1.15) {
             const totalSlices = Math.ceil(img.height / sliceHeight);
