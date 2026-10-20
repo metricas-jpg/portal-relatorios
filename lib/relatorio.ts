@@ -262,6 +262,12 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     };
   });
 
+  // ---------- período (só datas): "18/10 a 20/10/2026"; o ano inicial aparece só se for outro ano ----------
+  const textoDe = geral.periodo_inicio || inicioData;
+  const dDe = lerData(textoDe, refUltima);
+  const periodoAte = refUltima ? `${ddmm(refUltima)}/${refUltima.ano}` : ultima.split(',')[0].trim();
+  const periodoDe = dDe ? `${ddmm(dDe)}${refUltima && dDe.ano !== refUltima.ano ? `/${dDe.ano}` : ''}` : textoDe.split(',')[0].trim();
+
   // ---------- risco (cores definidas pela equipe) ----------
   const nivelRisco = (geral.nivel_risco || 'BAIXO').toUpperCase();
   const nr = normalizar(nivelRisco);
@@ -271,7 +277,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     orgao: geral.titulo_orgao || 'Presidência - Superintendência Negócios Digitais, Marketing e Experiência do Cooperado',
     titulo: geral.titulo_crise || '', unidade: geral.subtitulo_unidade || '',
     inicio: inicioMon, edicao: geral.edicao_numero || '',
-    periodoDe: (geral.periodo_inicio || inicioData).replace(/(\d{1,2}\/\d{1,2})\/\d{2,4}/, '$1'), periodoAte: ultima, ultimaAtualizacao: ultima,
+    periodoDe, periodoAte, ultimaAtualizacao: ultima,
     risco: { nivel: nivelRisco, cor: corRisco, tendencia: geral.risco_tendencia || '', texto: geral.risco_texto || '' },
     status: { nivel: geral.status_crise || '', tendencia: geral.status_tendencia || '', texto: geral.status_texto || '' },
     novas: { qtd: novas, detalhe: detalheNovas },
