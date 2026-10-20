@@ -187,6 +187,8 @@
 .doc .area-print.cheia { background: transparent; border-radius: 0; }
 .doc .area-print.cheia > svg { display: none; }
 .doc .area-print img.fatia { display: block; width: 100%; height: auto; border: .75pt solid var(--linha); }
+/* sobra absorvida: a última fatia é um pouco mais alta que a área e é reduzida para caber */
+.doc .area-print img.fatia.reduzida { width: auto; max-width: 100%; height: 100%; margin: 0 auto; }
 .doc .anexo-cont { font: 700 9.5pt/11.4pt var(--font); color: var(--turquesa); margin-top: 10pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .doc .anexo-cont span { font-weight: 400; font-style: italic; color: var(--cinza); font-size: 8pt; }
 

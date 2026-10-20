@@ -3,14 +3,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { nomeRede, type Clipping } from '@/lib/relatorio';
 import { CabecalhoInterno, Rodape, COR_TOM, extrairId, rico, vazio } from './comum';
-import { fatiarArquivo } from './fatiar';
+import { fatiarArquivo, type Fatia } from './fatiar';
 import { anexoPendente, avisarRelatorio } from './avisos-cliente';
 
 /**
  * Anexo de uma publicação: a página com os dados da matéria e o início do print, seguida de
  * quantas páginas de continuação forem necessárias para mostrar o print inteiro
  * ("Parte 2 de 3", "Parte 3 de 3"...). O print aparece como imagem, igual na tela e no PDF.
+ *
+ * Para a tela não ficar pesada, cada print só é baixado e convertido quando o anexo chega perto
+ * da área visível (ou quando alguém clica em "Gerar Relatório Final"), no máximo 2 ao mesmo tempo.
  */
+
+// no máximo 2 conversões simultâneas
+let emAndamento = 0;
+const fila: (() => void)[] = [];
+async function naFila<T>(tarefa: () => Promise<T>): Promise<T> {
+  if (emAndamento >= 2) await new Promise<void>(ok => fila.push(ok));
+  emAndamento++;
+  try { return await tarefa(); } finally { emAndamento--; fila.shift()?.(); }
+}
 interface Props { clip: Clipping; indice: number; total: number; linha: string; protagonismo: string }
 
 function AreaPrint({ children, cheia, refArea }: { children: React.ReactNode; cheia?: boolean; refArea?: React.Ref<HTMLDivElement> }) {
@@ -25,15 +37,34 @@ function AreaPrint({ children, cheia, refArea }: { children: React.ReactNode; ch
 export default function Anexo({ clip, indice, total, linha, protagonismo }: Props) {
   const id = extrairId(clip.printUrl);
   const imprensa = clip.rede === 'imp';
-  const [fatias, setFatias] = useState<string[] | null>(null);
+  const [fatias, setFatias] = useState<Fatia[] | null>(null);
   const [erro, setErro] = useState('');
+  const [carregar, setCarregar] = useState(false);
+  const secaoRef = useRef<HTMLElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
   const contRef = useRef<HTMLDivElement>(null);
+  const pedidoRef = useRef(false); // já entrou na contagem de pendentes
+  const iniciadoRef = useRef(false); // o carregamento já foi disparado (só acontece uma vez)
 
+  // começa a carregar quando o anexo chega perto da tela, ou quando o relatório vai ser gerado
   useEffect(() => {
     if (!id) return;
+    const pedir = () => {
+      if (iniciadoRef.current) return;
+      iniciadoRef.current = true;
+      pedidoRef.current = true; anexoPendente(+1);
+      setCarregar(true);
+    };
+    const obs = new IntersectionObserver(e => { if (e.some(x => x.isIntersecting)) pedir(); }, { rootMargin: '1200px 0px' });
+    if (secaoRef.current) obs.observe(secaoRef.current);
+    window.addEventListener('gerar-relatorio', pedir);
+    return () => { obs.disconnect(); window.removeEventListener('gerar-relatorio', pedir); };
+  }, [id]);
+
+  useEffect(() => {
+    if (!id || !carregar) return;
     let vivo = true;
-    anexoPendente(+1);
+    let criadas: Fatia[] = [];
     (async () => {
       try {
         await (document.fonts?.ready ?? Promise.resolve());
@@ -41,11 +72,14 @@ export default function Anexo({ clip, indice, total, linha, protagonismo }: Prop
         if (!a || !c) return;
         // proporção (altura/largura) das áreas de print; a imagem tem borda de ~1pt
         const prop = (el: HTMLElement) => (el.clientHeight - 4) / el.clientWidth;
-        const res = await fetch(`/api/relatorios/file?id=${id}&download=true`);
-        if (!res.ok) throw new Error(res.status === 404 ? 'arquivo não encontrado ou fora das planilhas do portal' : `o servidor respondeu ${res.status}`);
-        const blob = await res.blob();
-        if (!blob.type.startsWith('image/') && blob.type !== 'application/pdf') throw new Error(`formato não suportado (${blob.type || 'desconhecido'}); use PDF, PNG ou JPG`);
-        const f = await fatiarArquivo(blob, [prop(a), prop(c)]);
+        const f = await naFila(async () => {
+          const res = await fetch(`/api/relatorios/file?id=${id}&download=true`);
+          if (!res.ok) throw new Error(res.status === 404 ? 'arquivo não encontrado ou fora das planilhas do portal' : `o servidor respondeu ${res.status}`);
+          const blob = await res.blob();
+          if (!blob.type.startsWith('image/') && blob.type !== 'application/pdf') throw new Error(`formato não suportado (${blob.type || 'desconhecido'}); use PDF, PNG ou JPG`);
+          return fatiarArquivo(blob, [prop(a), prop(c)]);
+        });
+        criadas = f;
         if (!f.length) throw new Error('o arquivo está em branco');
         if (vivo) setFatias(f);
       } catch (e) {
@@ -53,11 +87,11 @@ export default function Anexo({ clip, indice, total, linha, protagonismo }: Prop
         if (vivo) setErro(msg);
         avisarRelatorio(`Anexo ${indice + 1} ("${clip.titulo.slice(0, 60)}"): não foi possível carregar o print (${msg}).`);
       } finally {
-        anexoPendente(-1);
+        if (pedidoRef.current) { pedidoRef.current = false; anexoPendente(-1); }
       }
     })();
-    return () => { vivo = false; };
-  }, [id, indice, clip.titulo]);
+    return () => { vivo = false; criadas.forEach(x => URL.revokeObjectURL(x.src)); };
+  }, [id, carregar, indice, clip.titulo]);
 
   const partes = fatias?.length || 1;
   const posicao = (k: number) => `Publicação ${indice + 1} de ${total}${partes > 1 ? `  ·  Parte ${k} de ${partes}` : ''}`;
@@ -82,15 +116,15 @@ export default function Anexo({ clip, indice, total, linha, protagonismo }: Prop
   let conteudoInicial: React.ReactNode;
   if (!id) conteudoInicial = <div className="vazio"><b>{imprensa ? 'MATÉRIA NA ÍNTEGRA' : 'PUBLICAÇÃO NA ÍNTEGRA'}</b>Nenhum print na COLUNA PRINT da planilha.</div>;
   else if (erro) conteudoInicial = <div className="vazio"><b>PRINT NÃO CARREGADO</b>{`Não foi possível carregar o arquivo: ${erro}.`}</div>;
-  else if (!fatias) conteudoInicial = <div className="vazio print-hidden">Carregando o print…</div>;
+  else if (!fatias) conteudoInicial = <div className="vazio">{carregar ? 'Carregando o print…' : 'O print será carregado ao rolar até aqui ou ao gerar o relatório.'}</div>;
   else {
     // eslint-disable-next-line @next/next/no-img-element
-    conteudoInicial = <img className="fatia" src={fatias[0]} alt={`Print da publicação ${indice + 1}, parte 1`} />;
+    conteudoInicial = <img className={`fatia${fatias[0].reduzida ? ' reduzida' : ''}`} src={fatias[0].src} alt={`Print da publicação ${indice + 1}, parte 1`} />;
   }
 
   return (
     <>
-      <section className="page" id={`clipping-page-${clip.idUnico}`}>
+      <section className="page" id={`clipping-page-${clip.idUnico}`} ref={secaoRef}>
         <CabecalhoInterno titulo="ANEXO · REGISTRO DE PUBLICAÇÃO" linha={linha} />
         <div className="corpo-anexo">
           {topo(1)}
@@ -115,10 +149,10 @@ export default function Anexo({ clip, indice, total, linha, protagonismo }: Prop
         <Rodape />
       </section>
 
-      {fatias?.slice(1).map((src, k) => (
+      {fatias?.slice(1).map((f, k) => (
         <section className="page" key={k}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {continuacao(k + 2, <img className="fatia" src={src} alt={`Print da publicação ${indice + 1}, parte ${k + 2}`} />)}
+          {continuacao(k + 2, <img className={`fatia${f.reduzida ? ' reduzida' : ''}`} src={f.src} alt={`Print da publicação ${indice + 1}, parte ${k + 2}`} />)}
         </section>
       ))}
 
