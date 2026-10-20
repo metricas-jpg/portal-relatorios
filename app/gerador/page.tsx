@@ -13,6 +13,7 @@ function extractId(url: string) {
   return match ? match[0] : '';
 }
 
+// Helper robusto para ler e ordenar datas no formato brasileiro (DD/MM/YYYY ou DD/MM)
 function parseDateBR(str: string) {
   if (!str) return 0;
   const parts = str.split(/[\s,\/h:]+/).filter(Boolean);
@@ -26,6 +27,7 @@ function parseDateBR(str: string) {
 }
 
 export default async function GeradorPage() {
+  // 1. SEGURANÇA BASEADA NO DOMÍNIO
   const session = await getServerSession(authOptions);
   if (!session?.user?.email || !session.user.email.toLowerCase().endsWith('@loggia.com.br')) {
     return (
@@ -37,6 +39,7 @@ export default async function GeradorPage() {
     );
   }
 
+  // 2. BUSCA DE DADOS
   const dados = await obterDadosDoRelatorio();
   const { geral = {}, registros = [], acionamentos = [] } = dados;
 
@@ -45,6 +48,9 @@ export default async function GeradorPage() {
   if (!geral.titulo_crise && !geral.erro_api) alertasDebug.push('Aba Geral: titulo_crise vazio');
   if (registros.length === 0 && !geral.erro_api) alertasDebug.push('Aba Registro_Central: Nenhum dado preenchido.');
 
+  // =======================================================================
+  // VARIÁVEIS DE TEXTOS DINÂMICOS
+  // =======================================================================
   const tituloOrgao = geral.titulo_orgao || 'Presidência - Superintendência Negócios Digitais, Marketing e Experiência do Cooperado';
   const tituloOQueMudou = geral.titulo_o_que_mudou || 'O QUE MUDOU';
   const tituloOQueSignifica = geral.titulo_o_que_significa || 'O QUE SIGNIFICA PARA O SICOOB';
@@ -61,15 +67,25 @@ export default async function GeradorPage() {
 
   const gatilhos = (geral.gatilhos_escalada || '').split('\n').filter(g => g.trim() !== '');
   
+  // Cores do Risco Específicas
   const nivelRisco = (geral.nivel_risco || 'BAIXO').toUpperCase();
   const corRisco = nivelRisco === 'ALTO' ? '#003641' : nivelRisco === 'MÉDIO' ? '#c9d200' : '#7db61c';
 
+  // =======================================================================
+  // MATEMÁTICA INTELIGENTE (AUTOMATIZADA)
+  // =======================================================================
+  
+  // Apenas registros válidos que são publicações ou redes sociais (ignora eventos sem plataforma)
   const registrosValidos = registros.filter(r => r.plataforma && r.plataforma !== '-');
   const registrosSicoob = registrosValidos.filter(r => r.envolveSicoob);
 
+  // 1. Menções Gerais ao Tema (Soma TUDO, mesmo com "Envolve Sicoob" = NÃO)
   const mencoesGeraisQtd = registrosValidos.reduce((acc, curr) => acc + (curr.volume || 1), 0);
+
+  // 2. Menções ao Sicoob Acumuladas
   const totalAcumulado = registrosSicoob.reduce((acc, curr) => acc + (curr.volume || 1), 0);
 
+  // 3. Novas Menções ao Sicoob (Comparação de Datas)
   let novasMencoesQtd = 0;
   if (inicioMon === ultimaAtualizacao) {
     novasMencoesQtd = totalAcumulado;
@@ -80,34 +96,44 @@ export default async function GeradorPage() {
       .reduce((acc, curr) => acc + (curr.volume || 1), 0);
   }
 
+  // 4. Acionamentos de Imprensa
   const acionamentosValidos = acionamentos.filter(a => a.data && a.veiculo && a.jornalista && a.demanda);
   const acionamentosQtd = acionamentosValidos.length;
 
+  // Separação de Plataformas para a Legenda
   const platMap: Record<string, number> = { Imprensa: 0, Instagram: 0, 'X/Twitter': 0, Facebook: 0, LinkedIn: 0, YouTube: 0 };
   registrosSicoob.forEach(r => { 
     platMap[r.plataforma] = (platMap[r.plataforma] || 0) + (r.volume || 1); 
   });
 
+  // Filtros de Timeline e Clipping
   const timelineItens = registros.filter(r => r.mostrarTimeline);
   const clippings = registros.filter(r => r.gerarClipping).map((c, i) => ({ ...c, idUnico: `clip_${i}` }));
 
+  // =======================================================================
+  // MOTOR DO GRÁFICO RESPONSIVO
+  // =======================================================================
+  // Pega as datas, remove lixos, e ORDENA cronologicamente do mais antigo para o mais recente
   const graficoDias = Array.from(new Set(registrosSicoob.map(r => r.dataPost)))
     .filter(d => d && d !== '-' && d.includes('/'))
     .sort((a, b) => parseDateBR(a) - parseDateBR(b));
 
-  const X0 = 43, X1 = 552.4, BASE = 741.2, LARG = 25.3, MAX_CHART_HEIGHT = 105;
+  const X0 = 43, X1 = 552.4, BASE = 700, MAX_CHART_HEIGHT = 105, LARG = 25.3;
   const passo = graficoDias.length > 0 ? (X1 - X0) / graficoDias.length : 0;
   
+  // Acha o dia com a maior torre de volume para criar a "régua" de proporção
   let maxDia = 0;
   graficoDias.forEach(dia => {
     const volDia = registrosSicoob.filter(r => r.dataPost === dia).reduce((acc, curr) => acc + (curr.volume || 1), 0);
     if (volDia > maxDia) maxDia = volDia;
   });
 
+  // Garante que o gráfico NUNCA estoure a altura máxima, encolhendo os blocos proporcionalmente
   const UNID = maxDia > 0 ? Math.min(17.3, MAX_CHART_HEIGHT / maxDia) : 17.3;
   
   const coresPlataforma: Record<string, string> = { Imprensa: 'var(--roxo)', Instagram: 'var(--turquesa)', 'X/Twitter': 'var(--petroleo)', Facebook: 'var(--verde)', LinkedIn: 'var(--lima)', YouTube: 'var(--laranja)' };
 
+  // Helpers da Timeline
   const getCorPontoTimeline = (ton: string) => { const t = (ton||'').toUpperCase(); return t==='NEGATIVA'?'neg':t==='NEUTRA'?'neu':t==='POSITIVA'?'pos':'acl'; };
   const getCorTextoTimeline = (ton: string) => { const t = (ton||'').toUpperCase(); return t==='NEGATIVA'?'c-verm':t==='NEUTRA'?'c-neutra':'c-cinza'; };
   const st = (b: string | number, left?: string | number, extra?: any) => ({ '--b': typeof b === 'number' ? `${b}pt` : b, ...(left && { left: typeof left === 'number' ? `${left}pt` : left }), ...extra } as React.CSSProperties);
@@ -126,7 +152,7 @@ export default async function GeradorPage() {
         <PrintController clippings={clippings} />
       </header>
 
-      {/* PAINEL DE ALERTA */}
+      {/* PAINEL DE ALERTA DE ERROS DA PLANILHA */}
       {alertasDebug.length > 0 && (
         <div className="print-hidden w-full max-w-[595pt] bg-[#FFF6CC] border border-[#E8D277] text-[#6B5300] p-5 rounded-xl shadow-sm mb-4">
           <h3 className="font-bold text-sm mb-3">Atenção: Houve um problema na leitura da planilha!</h3>
@@ -151,6 +177,7 @@ export default async function GeradorPage() {
         <div className="card" style={{ position:'absolute', left:'32.4pt', top:'219.6pt', width:'258.1pt', height:'95pt' }}></div>
         <span className="t z75 b sp c-cinza" style={st('238.6pt', '46.8pt')}>RISCO PARA A INSTITUIÇÃO</span>
         <span className="t z75 b c-cinza r" style={st('238.6pt', undefined, { right: 'calc(var(--W) - 276.1pt)' })}>→ {geral.risco_tendencia || ''}</span>
+        {/* Cor do Risco Mapeada */}
         <span className="t z26 b" style={st('273.5pt', '46.8pt', { color: corRisco })}>{nivelRisco}</span>
         <span className="t wrap z8 c-cinza" style={st('290.9pt', '46.8pt', { width: '229.3pt' })}>{geral.risco_texto || ''}</span>
 
@@ -192,19 +219,19 @@ export default async function GeradorPage() {
         <span className="t z26 b c-claro" style={st('387.7pt', '474.2pt')}>{acionamentosQtd}</span>
         <span className="t z7 c-cinza" style={st('401.5pt', '474.2pt')}>novos · em aberto</span>
 
-        <span className="t z85 b c-turq" style={st('440.5pt', '32.4pt', { textTransform: 'uppercase' })}>{tituloOQueMudou}</span>
+        <span className="t z85 b c-turq" style={st('440.5pt', '32.4pt')}>{tituloOQueMudou.toUpperCase()}</span>
         <span className="t wrap z9 lh119 c-texto" style={st('442.1pt', '162pt', { width: '404pt' })}>{geral.o_que_mudou || ''}</span>
         
         <div style={{ position:'absolute', left:'32.4pt', top: '492.83pt', width: '530.6pt', height: '.74pt', background: 'var(--linha)' }}></div>
         
-        <span className="t z85 b c-turq" style={st('507.4pt', '32.4pt', { textTransform: 'uppercase' })}>{tituloOQueSignifica}</span>
+        <span className="t z85 b c-turq" style={st('507.4pt', '32.4pt')}>{tituloOQueSignifica.toUpperCase()}</span>
         <span className="t z7 i c-cinza" style={st('534.7pt', '32.4pt')}>Protagonismo: {protagonismo}</span>
         <span className="t wrap z9 lh119 c-texto" style={st('509pt', '162pt', { width: '404pt' })}>{geral.o_que_significa || ''}</span>
 
         <span className="t z75 b sp c-pet" style={st('579.9pt', '32.4pt')}>MENÇÕES AO SICOOB POR DIA DE COLETA, POR REDE</span>
-        <span className="t z7 i c-cinza r" style={st('579.4pt', undefined, { right: 'calc(var(--W) - 563pt)' })}>
-          O total acumulado ({totalAcumulado}) fica no indicador acima, fora do gráfico
-        </span>
+        
+        {/* Adicionado o texto explicativo sobre os totais fora do gráfico */}
+        <span className="t z7 i c-cinza r" style={st('579.4pt', undefined, { right: 'calc(var(--W) - 563pt)' })}>O total acumulado ({totalAcumulado}) fica no indicador acima, fora do gráfico</span>
 
         <div style={{ position:'absolute', left:'32.4pt', top:'594pt', width:'7.9pt', height:'7.9pt', background:'var(--roxo)' }}></div>
         <div style={{ position:'absolute', left:'102.2pt', top:'594pt', width:'7.9pt', height:'7.9pt', background:'var(--turquesa)' }}></div>
@@ -219,6 +246,7 @@ export default async function GeradorPage() {
         <span className="t z75 c-texto" style={st('600.9pt', '332.6pt')}>LinkedIn</span>
         <span className="t z75 c-texto" style={st('600.9pt', '402.5pt')}>YouTube</span>
 
+        {/* MOTOR DO GRÁFICO (Com Altura Limitada Dinamicamente) */}
         <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' }}>
           <div style={{ position: 'absolute', left: `${X0}pt`, top: `${BASE - 0.5}pt`, width: `${X1 - X0}pt`, height: '0.99pt', background: 'var(--linha)' }}></div>
           {Array.from({ length: graficoDias.length + 1 }).map((_, i) => (
@@ -274,7 +302,7 @@ export default async function GeradorPage() {
           const baseB = 152.5 + (idx * 36);
           const corPonto = getCorPontoTimeline(item.tonalidade);
           const corTextoTag = getCorTextoTimeline(item.tonalidade);
-          const exibicaoTexto = item.textoTimeline || '';
+          const exibicaoTexto = item.textoTimeline || item.fato || '';
           
           if (item.proximoMarco) return (<div key={`tl-${idx}`} style={st(baseB, undefined, { position: 'static' })}><span className="t z85 b c-roxo tl-data">Próximo</span><i className="dot next"></i><span className="t wrap z85 b c-texto tl-txt">{exibicaoTexto}</span></div>);
           if (!item.envolveSicoob) return (<div key={`tl-${idx}`} style={st(baseB, undefined, { position: 'static' })}><span className="t z85 b c-pet tl-data">{item.dataPost || ''}</span><i className="dot p"></i><span className="t wrap z85 c-cinza tl-txt">{exibicaoTexto}</span></div>);
@@ -364,11 +392,9 @@ export default async function GeradorPage() {
           <span className="t z75 b sp c-oliva" style={st('300.5pt', '46.8pt')}>O QUE A MATÉRIA DIZ SOBRE O SICOOB</span>
           <span className="t wrap z9 lh119 c-texto" style={st('319.7pt', '46.8pt', { width: '501.8pt' })}>{clip.trecho || ''}</span>
 
-          <span className="t z10 b c-cinza c" style={st('546.5pt', '32.4pt', { width: '530.6pt' })}>MATÉRIA NA ÍNTEGRA</span>
-
           {/* O BLOCO HÍBRIDO (Tela vs Impressão) */}
           <div style={{ position:'absolute', left:'31.9pt', top:'377.5pt', width:'531.6pt', height:'411.4pt', borderRadius:'5.76pt', overflow:'hidden', border: '1px dashed #A9B5B9', background: '#FAFBFB' }}>
-             
+             {/* Visível na Tela */}
              <div className="print-hidden w-full h-full flex flex-col items-center justify-center text-slate-400">
                  {clip.printUrl ? (
                      <iframe src={`/api/relatorios/file?id=${extractId(clip.printUrl)}`} className="w-full h-full border-none" title="Anexo" />
@@ -377,6 +403,7 @@ export default async function GeradorPage() {
                  )}
              </div>
 
+             {/* Oculto na Tela, Visível no PDF */}
              <div className="hidden print:block w-full h-full bg-white" id={`print-container-cover-${clip.idUnico}`}>
                 {clip.printUrl && (
                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
