@@ -23,7 +23,7 @@ function Grafico({ r }: { r: Dados }) {
     <div key={key} style={{ position: 'absolute', left: `${l}pt`, top: `${t}pt`, width: `${w}pt`, height: `${h}pt`, background: bg }} />;
 
   return (
-    <div style={{ left: 0, top: 0, width: '100%', height: '100%' }}>
+    <div className="grafico" style={{ left: 0, top: 0, width: '100%', height: '100%' }}>
       {caixa(X0, BASE - 0.5, X1 - X0, 0.99, 'var(--linha)', 'eixo')}
       {dias.map((_, i) => caixa(X0 + passo * i - 0.5, BASE, 0.99, 4.3, 'var(--linha)', `m${i}`))}
       {caixa(X1 - 0.5, BASE, 0.99, 4.3, 'var(--linha)', 'mfim')}

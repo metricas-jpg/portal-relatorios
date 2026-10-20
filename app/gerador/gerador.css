@@ -79,6 +79,9 @@
 .doc .card { background: var(--card); border-radius: 5.76pt; }
 .doc .sq { width: 7.2pt; height: 7.2pt; }
 .doc .logo { display: block; }
+/* a camada do gráfico cobre a página inteira: deixa o mouse passar para os textos que estão por baixo */
+.doc .grafico { pointer-events: none; }
+.doc .grafico .t { pointer-events: auto; }
 
 /* coluna esquerda das seções "O que mudou" / "O que significa" (página 1) */
 .doc .col-esq { left: 32.4pt; width: 120pt; display: flex; flex-direction: column; }
