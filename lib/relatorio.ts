@@ -164,6 +164,9 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
 
   // ---------- novas menções e período ----------
   const refPeriodo = lerData(geral.periodo_inicio || '', refUltima);
+  if (refPeriodo && refUltima && chaveDia(refPeriodo) > chaveDia(refUltima)) {
+    avisos.push(`Configuracoes_Gerais: periodo_inicio (${geral.periodo_inicio}) é posterior a ultima_atualizacao (${ultima}). Confira as datas: "Novas menções" fica zerado.`);
+  }
   let novas: number;
   if (refPeriodo && refUltima) {
     const de = chaveDia(refPeriodo), ate = chaveDia(refUltima);
