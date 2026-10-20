@@ -55,6 +55,10 @@ Opcionais: `analise_revisao_data` ("Última revisão: …" na página 3; some qu
 
 Em qualquer texto, `**trecho**` sai em negrito.
 
+### Prints dos anexos (COLUNA PRINT)
+
+O arquivo do Drive (PDF, PNG ou JPG) é convertido em imagem no navegador e aparece igual na tela e no PDF final, sem a barra do leitor de PDF. O conteúdo é mostrado **inteiro**: as páginas do arquivo são emendadas numa faixa contínua, sem as margens brancas, e cortadas no tamanho da área de print. O começo fica na página do anexo e o restante segue em páginas de continuação ("Parte 2 de 5"...). O corte procura um espaço em branco para não partir uma linha de texto. O botão **Gerar Relatório Final** espera todos os prints carregarem antes de abrir a impressão. O conversor de PDF (pdf.js 3.11.174) é carregado do cdnjs.
+
 ### `Registro_Central`
 
 - **Tipo de Registro**: tipos que começam com `Evento` (`Evento Jurídico`, `Evento Factual`) não são publicações: não entram em nenhum número nem no gráfico, mesmo com Canal/Veiculo preenchido, mas podem aparecer na linha do tempo.

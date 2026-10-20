@@ -40,7 +40,7 @@
   position: relative; width: var(--W); height: var(--H); background: #fff; overflow: hidden; flex: none;
 }
 .doc .page { box-shadow: 0 2px 12px rgba(0,40,50,.18); counter-increment: pagina; }
-.doc .page > * { position: absolute; }
+.doc .page > *, .doc .folha-medida > * { position: absolute; }
 .doc .folha-medida { position: absolute; left: -20000px; top: 0; visibility: hidden; pointer-events: none; }
 
 /* ---------- texto pela linha de base ---------- */
@@ -183,6 +183,12 @@
 .doc .area-print .vazio { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; color: var(--cinza); font: 8.5pt/10.2pt var(--font); padding: 0 80pt; }
 .doc .area-print .vazio b { font: 700 10pt/12pt var(--font); margin-bottom: 17pt; }
+/* com print carregado: sem moldura tracejada; a imagem ocupa a largura toda e começa no topo */
+.doc .area-print.cheia { background: transparent; border-radius: 0; }
+.doc .area-print.cheia > svg { display: none; }
+.doc .area-print img.fatia { display: block; width: 100%; height: auto; border: .75pt solid var(--linha); }
+.doc .anexo-cont { font: 700 9.5pt/11.4pt var(--font); color: var(--turquesa); margin-top: 10pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc .anexo-cont span { font-weight: 400; font-style: italic; color: var(--cinza); font-size: 8pt; }
 
 /* ======================= impressão ======================= */
 @media print {
