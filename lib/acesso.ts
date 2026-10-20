@@ -12,7 +12,7 @@ import { google } from 'googleapis';
  *    Se a aba estiver vazia ou não puder ser lida, vale o domínio @loggia.com.br.
  *
  * 3. Quais ARQUIVOS do Drive o portal entrega: só os que aparecem na aba "Relatorios"
- *    (portal) ou na coluna PRINT da aba "Registro_Central" (gerador).
+ *    (portal) ou na aba "Registro_Central" (gerador, coluna PRINT).
  */
 
 const CACHE_MS = 60_000;
@@ -90,7 +90,7 @@ export async function arquivoPermitido(fileId: string): Promise<boolean> {
     const sheets = sheetsClient();
     const fontes: [string | undefined, string][] = [
       [process.env.GOOGLE_SHEET_ID, 'Relatorios!A2:E'],
-      [process.env.SPREADSHEET_ID, 'Registro_Central!P2:P'],
+      [process.env.SPREADSHEET_ID, 'Registro_Central!A2:Z'], // a coluna PRINT pode mudar de lugar
     ];
     for (const [spreadsheetId, range] of fontes) {
       if (!spreadsheetId) continue;

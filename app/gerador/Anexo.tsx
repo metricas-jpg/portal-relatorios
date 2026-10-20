@@ -37,6 +37,7 @@ function AreaPrint({ children, cheia, refArea }: { children: React.ReactNode; ch
 export default function Anexo({ clip, indice, total, linha, protagonismo }: Props) {
   const id = extrairId(clip.printUrl);
   const imprensa = clip.rede === 'imp';
+  const linhaVerde = imprensa ? clip.veiculo : clip.autoria;
   const [fatias, setFatias] = useState<Fatia[] | null>(null);
   const [erro, setErro] = useState('');
   const [carregar, setCarregar] = useState(false);
@@ -106,7 +107,7 @@ export default function Anexo({ clip, indice, total, linha, protagonismo }: Prop
       <CabecalhoInterno titulo="ANEXO · REGISTRO DE PUBLICAÇÃO" linha={linha} />
       <div className="corpo-anexo">
         {topo(k)}
-        <div className="anexo-cont">{[clip.veiculo, clip.titulo].filter(Boolean).join(' · ')} <span>(continuação)</span></div>
+        <div className="anexo-cont">{[linhaVerde || (imprensa ? '' : nomeRede(clip.rede)), clip.titulo].filter(Boolean).join(' · ')} <span>(continuação)</span></div>
         <AreaPrint cheia refArea={ref}>{conteudo}</AreaPrint>
       </div>
       <Rodape />
@@ -128,8 +129,8 @@ export default function Anexo({ clip, indice, total, linha, protagonismo }: Prop
         <CabecalhoInterno titulo="ANEXO · REGISTRO DE PUBLICAÇÃO" linha={linha} />
         <div className="corpo-anexo">
           {topo(1)}
-          {/* em redes sociais o nome da rede já está na etiqueta roxa; nas continuações a linha verde continua */}
-          {clip.veiculo && imprensa && <div className="veiculo">{clip.veiculo}</div>}
+          {/* linha verde: imprensa mostra o veículo; rede social mostra a autoria (a rede já está na etiqueta roxa) */}
+          {linhaVerde && <div className="veiculo">{linhaVerde}</div>}
           <div className="anexo-tit">{vazio(clip.titulo, '[Título da publicação]')}</div>
           <div className="meta3">
             <div><div className="k">PUBLICAÇÃO</div><div className="v">{vazio(clip.dataPost, '—')}</div></div>

@@ -63,6 +63,8 @@ O arquivo do Drive (PDF, PNG ou JPG) é convertido em imagem no navegador e apar
 
 ### `Registro_Central`
 
+As colunas são localizadas pelo **nome do cabeçalho** (linha 1), não pela posição: a ordem pode mudar sem quebrar o relatório. Se um nome for alterado, o painel avisa e a posição padrão é usada.
+
 - **Tipo de Registro**: tipos que começam com `Evento` (`Evento Jurídico`, `Evento Factual`) não são publicações: não entram em nenhum número nem no gráfico, mesmo com Canal/Veiculo preenchido, mas podem aparecer na linha do tempo.
 - **Canal/Veiculo** (demais tipos): nome da rede (`Instagram`, `X/Twitter`, `Facebook`, `LinkedIn`, `YouTube`) ou do veículo de imprensa (`ES Hoje`...). Nome que não seja uma das cinco redes conta como **Imprensa**. Vazio ou `-` = fora dos números (o painel avisa).
 - **Datas** sem ano usam o ano da `ultima_atualizacao`. Faixas como `09 a 13/08` são aceitas na linha do tempo.
