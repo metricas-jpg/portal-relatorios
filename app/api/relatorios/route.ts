@@ -1,7 +1,14 @@
 import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { emailPodeEntrar } from '@/lib/acesso';
 
-    export async function GET() {
+export async function GET() {
+    const session = await getServerSession(authOptions);
+    if (!emailPodeEntrar(session?.user?.email)) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
     try {
         const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
         const privateKey = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
@@ -39,6 +46,6 @@ import { NextResponse } from 'next/server';
     return NextResponse.json({ relatorios });
   } catch (error: any) {
     console.error('Erro na API:', error);
-    return NextResponse.json({ error: error.message || 'Erro ao consultar planilha' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao consultar planilha' }, { status: 500 });
   }
 }

@@ -16,6 +16,8 @@ export interface AcionamentoImprensa {
   data: string; veiculo: string; jornalista: string; demanda: string; prazo: string; resposta: string; status: string;
 }
 
+const sim = (v?: string) => (v || '').trim().toUpperCase() === 'SIM';
+
 function getAuth() {
   return new google.auth.JWT({
     email: process.env.GOOGLE_CLIENT_EMAIL,
@@ -45,9 +47,9 @@ export async function obterDadosDoRelatorio(): Promise<RelatorioDados> {
     const linhasRegistros = abas[1].values || [];
     const registros: RegistroCentral[] = linhasRegistros.map((coluna) => ({
       dataPost: coluna[0] || '', dataColeta: coluna[1] || '', linkMateria: coluna[2] || '', plataforma: coluna[3] || '',
-      envolveSicoob: coluna[4]?.toUpperCase() === 'SIM', tipo: coluna[5] || '', fato: coluna[6] || '', textoTimeline: coluna[7] || '',
-      tonalidade: coluna[8] || '', mostrarTimeline: coluna[9]?.toUpperCase() === 'SIM', proximoMarco: coluna[10]?.toUpperCase() === 'SIM',
-      gerarClipping: coluna[11]?.toUpperCase() === 'SIM', trecho: coluna[12] || '', autoria: coluna[13] || '',
+      envolveSicoob: sim(coluna[4]), tipo: coluna[5] || '', fato: coluna[6] || '', textoTimeline: coluna[7] || '',
+      tonalidade: coluna[8] || '', mostrarTimeline: sim(coluna[9]), proximoMarco: sim(coluna[10]),
+      gerarClipping: sim(coluna[11]), trecho: coluna[12] || '', autoria: coluna[13] || '',
       volume: parseInt(coluna[14]) || 1, printUrl: coluna[15] || '',
     }));
 

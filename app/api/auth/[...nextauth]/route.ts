@@ -1,5 +1,6 @@
 import NextAuth, { AuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
+import { emailPodeEntrar } from '@/lib/acesso';
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -13,6 +14,10 @@ export const authOptions: AuthOptions = {
     error: '/',
   },
   callbacks: {
+    // Só entra quem está na lista de domínios/e-mails permitidos (ver lib/acesso.ts)
+    async signIn({ user }) {
+      return emailPodeEntrar(user.email) ? true : '/?erro=AcessoNegado';
+    },
     async redirect({ url, baseUrl }) {
       if (url.startsWith('/')) return `${baseUrl}${url}`;
       else if (new URL(url).origin === baseUrl) return url;
