@@ -37,7 +37,8 @@ function AreaPrint({ children, cheia, refArea }: { children: React.ReactNode; ch
 export default function Anexo({ clip, indice, total, linha, protagonismo }: Props) {
   const id = extrairId(clip.printUrl);
   const imprensa = clip.rede === 'imp';
-  const linhaVerde = imprensa ? clip.veiculo : clip.autoria;
+  // linha verde só para imprensa (em rede social a rede já está na etiqueta roxa e a autoria na caixa abaixo)
+  const linhaVerde = imprensa ? clip.veiculo : '';
   const [fatias, setFatias] = useState<Fatia[] | null>(null);
   const [erro, setErro] = useState('');
   const [carregar, setCarregar] = useState(false);
@@ -129,7 +130,7 @@ export default function Anexo({ clip, indice, total, linha, protagonismo }: Prop
         <CabecalhoInterno titulo="ANEXO · REGISTRO DE PUBLICAÇÃO" linha={linha} />
         <div className="corpo-anexo">
           {topo(1)}
-          {/* linha verde: imprensa mostra o veículo; rede social mostra a autoria (a rede já está na etiqueta roxa) */}
+          {/* linha verde: só imprensa (nome do veículo) */}
           {linhaVerde && <div className="veiculo">{linhaVerde}</div>}
           <div className="anexo-tit">{vazio(clip.titulo, '[Título da publicação]')}</div>
           <div className="meta3">

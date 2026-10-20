@@ -59,6 +59,10 @@
   overflow: hidden; white-space: pre-wrap; max-height: calc(var(--lh) * var(--linhas, 1));
 }
 .doc .lim1 { white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+/* texto que encaixa: 1 linha; se não couber, 2 linhas subindo 3pt; depois fonte menor (AjustePagina1) */
+.doc .det { overflow: hidden; text-overflow: ellipsis; }
+.doc .det.duas { --dy: -3pt; }
+.doc .det.duas .det-b { display: block; }
 
 /* tipografia */
 .doc .z65{--fs:6.5pt} .doc .z7{--fs:7pt} .doc .z75{--fs:7.5pt} .doc .z8{--fs:8pt} .doc .z85{--fs:8.5pt} .doc .z9{--fs:9pt}
