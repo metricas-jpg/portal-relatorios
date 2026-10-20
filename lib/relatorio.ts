@@ -118,6 +118,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const { geral = {}, registros = [], acionamentos = [] } = dados;
   const avisos: string[] = [];
   if (geral.erro_api) avisos.push(`Erro de conexão com a planilha: ${geral.erro_api}`);
+  avisos.push(...(dados.avisosLeitura || []));
 
   // Campos que o relatório usa e que não existem (ou estão vazios) na aba Configuracoes_Gerais
   const esperados: [string, string][] = [
