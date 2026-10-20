@@ -10,3 +10,12 @@ export function avisarRelatorio(msg: string) {
   lista.push(msg);
   window.dispatchEvent(new CustomEvent('relatorio-aviso'));
 }
+
+/** Quantos anexos ainda estão sendo carregados (o botão de gerar espera chegar a zero). */
+declare global { interface Window { __anexosPendentes?: number } }
+
+export function anexoPendente(delta: number) {
+  if (typeof window === 'undefined') return;
+  window.__anexosPendentes = Math.max(0, (window.__anexosPendentes || 0) + delta);
+  window.dispatchEvent(new CustomEvent('anexos-mudou'));
+}

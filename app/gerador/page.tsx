@@ -36,7 +36,7 @@ export default async function GeradorPage() {
           <div className="h-6 w-px bg-white/20"></div>
           <span className="font-bold">Gerador de Relatórios</span>
         </div>
-        <PrintController clippings={r.clippings} />
+        <PrintController totalAnexos={r.clippings.filter(c => c.printUrl).length} />
       </header>
 
       <PainelAvisos avisos={r.avisos} />
