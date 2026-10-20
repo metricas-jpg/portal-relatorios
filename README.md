@@ -57,7 +57,8 @@ Em qualquer texto, `**trecho**` sai em negrito.
 
 ### `Registro_Central`
 
-- **Canal/Veiculo**: nome da rede (`Instagram`, `X/Twitter`, `Facebook`, `LinkedIn`, `YouTube`) ou do veículo de imprensa (`ES Hoje`...). Qualquer nome que não seja uma das cinco redes conta como **Imprensa**. Vazio ou `-` = evento sem publicação (não entra nos números).
+- **Tipo de Registro**: tipos que começam com `Evento` (`Evento Jurídico`, `Evento Factual`) não são publicações: não entram em nenhum número nem no gráfico, mesmo com Canal/Veiculo preenchido, mas podem aparecer na linha do tempo.
+- **Canal/Veiculo** (demais tipos): nome da rede (`Instagram`, `X/Twitter`, `Facebook`, `LinkedIn`, `YouTube`) ou do veículo de imprensa (`ES Hoje`...). Nome que não seja uma das cinco redes conta como **Imprensa**. Vazio ou `-` = fora dos números (o painel avisa).
 - **Datas** sem ano usam o ano da `ultima_atualizacao`. Faixas como `09 a 13/08` são aceitas na linha do tempo.
 - **Linha do tempo**: o próximo marco vem primeiro; depois do mais recente para o mais antigo. Com `Envolve Sicoob? = NÃO`, o item aparece como contexto, qualquer que seja a tonalidade. Com `SIM` e tonalidade diferente de Negativa/Neutra/Positiva, aparece como `[A CLASSIFICAR]`.
 

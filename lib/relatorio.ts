@@ -36,6 +36,17 @@ export function redeDoCanal(canal: string): Rede | null {
   return 'imp';
 }
 
+/**
+ * Rede de um registro, considerando o "Tipo de Registro":
+ * - "Evento ..." (Evento Jurídico, Evento Factual): não é publicação, não entra nos números,
+ *   mesmo que a coluna Canal/Veiculo esteja preenchida (continua podendo ir para a linha do tempo);
+ * - demais tipos: a rede vem do Canal/Veiculo.
+ */
+export function redeDoRegistro(tipo: string, canal: string): Rede | null {
+  if (normalizar(tipo).startsWith('EVENTO')) return null;
+  return redeDoCanal(canal);
+}
+
 // ---------- datas ----------
 export interface DataLida { ts: number; dia: number; mes: number; ano: number; temHora: boolean }
 
@@ -131,7 +142,10 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const regs: Reg[] = registros.map((r, i) => {
     const dPost = lerData(r.dataPost, refUltima);
     const dColeta = lerData(r.dataColeta, refUltima);
-    return { ...r, rede: redeDoCanal(r.plataforma), dPost, dRef: dColeta || dPost, linha: i + 2 };
+    const rede = redeDoRegistro(r.tipo, r.plataforma);
+    if (!rede && !normalizar(r.tipo).startsWith('EVENTO') && /IMPRENSA|MATERIA|REDE|MENCAO|POST/.test(normalizar(r.tipo)))
+      avisos.push(`Registro_Central, linha ${i + 2}: tipo "${r.tipo}" sem Canal/Veículo; a publicação ficou fora dos números.`);
+    return { ...r, rede, dPost, dRef: dColeta || dPost, linha: i + 2 };
   });
   const publicacoes = regs.filter(r => r.rede);
   const doSicoob = publicacoes.filter(r => r.envolveSicoob);
