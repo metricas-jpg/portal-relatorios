@@ -1,55 +1,8 @@
-import { Fragment, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, type CSSProperties } from 'react';
 import Paginador, { type Bloco } from './Paginador';
-import { REDES, nomeRede, normalizar, type Relatorio as Dados, type ItemTimeline, type Tom } from '@/lib/relatorio';
-
-/* ============================== utilitários ============================== */
-
-/** estilo de um texto posicionado pela linha de base (--b) */
-const st = (b: number, left?: number, extra?: CSSProperties) =>
-  ({ '--b': `${b}pt`, ...(left !== undefined && { left: `${left}pt` }), ...extra }) as CSSProperties;
-
-/** limite de linhas; ultrapassar gera aviso no painel */
-const lim = (linhas: number, largura: number) =>
-  ({ '--linhas': linhas, width: `${largura}pt` }) as CSSProperties;
-
-/** **negrito** na planilha vira negrito no relatório */
-function rico(texto: string): ReactNode {
-  if (!texto.includes('**')) return texto;
-  return texto.split(/(\*\*[^*]+\*\*)/g).map((p, i) => (p.startsWith('**') && p.endsWith('**') ? <b key={i}>{p.slice(2, -2)}</b> : p));
-}
-
-const vazio = (v: string, ph = '[__]') => (v && v.trim() ? v : ph);
-
-/** seta da tendência: "Subindo" ↑, "Caindo"/"Descendo" ↓, qualquer outro valor → */
-function tendencia(t: string) {
-  if (!t.trim()) return '';
-  const n = normalizar(t);
-  const seta = n.startsWith('SUB') || n.startsWith('ALT') ? '↑' : n.startsWith('CA') || n.startsWith('DESC') || n.startsWith('BAIX') ? '↓' : '→';
-  return `${seta}  ${t.toUpperCase()}`;
-}
-
-const RODAPE = 'Documento interno · Sicoob — não redistribuir fora do ambiente autorizado.';
-
-function Rodape() {
-  return (
-    <>
-      <span className="t z75 i c-verm rodape">{RODAPE}</span>
-      <span className="t z8 c-cinza r num" />
-    </>
-  );
-}
-
-function CabecalhoInterno({ titulo, linha }: { titulo: string; linha: string }) {
-  return (
-    <>
-      <div className="bg" style={{ height: '68.4pt' }} />
-      <span className="t z12 b c-lima" style={st(30, 32.4)}>{titulo}</span>
-      <span className="t z8 c-branco lim1" style={st(50, 32.4, { width: '420pt' })}>{linha}</span>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="logo" src="/logo-sicoob.svg" alt="Sicoob" style={{ left: '465.85pt', top: '20.86pt', width: '97.17pt', height: '25.31pt' }} />
-    </>
-  );
-}
+import Anexo from './Anexo';
+import { st, lim, rico, vazio, tendencia, Rodape, CabecalhoInterno } from './comum';
+import { REDES, type Relatorio as Dados, type ItemTimeline, type Tom } from '@/lib/relatorio';
 
 /* ============================== página 1 ============================== */
 
@@ -282,73 +235,6 @@ function Pagina3({ r, linha }: { r: Dados; linha: string }) {
   );
 }
 
-/* ============================== anexos ============================== */
-
-const COR_TOM: Record<Tom, string> = { neg: 'var(--vermelho)', neu: 'var(--cinza-tom)', pos: 'var(--verde-escuro)', acl: 'var(--cinza)', ctx: 'var(--cinza)', next: 'var(--roxo)' };
-
-function extrairId(url: string) {
-  const m = (url || '').match(/[-\w]{25,}/);
-  return m ? m[0] : '';
-}
-
-function Anexos({ r, linha }: { r: Dados; linha: string }) {
-  const n = r.clippings.length;
-  return (
-    <>
-      {r.clippings.map((c, i) => {
-        const imprensa = c.rede === 'imp';
-        const id = extrairId(c.printUrl);
-        return (
-          <section className="page" id={`clipping-page-${c.idUnico}`} key={c.idUnico}>
-            <CabecalhoInterno titulo="ANEXO · REGISTRO DE PUBLICAÇÃO" linha={linha} />
-            <div className="corpo-anexo">
-              <div className="anexo-topo">
-                <span className="pilula">{nomeRede(c.rede)}</span>
-                <span className="pos">{`Publicação ${i + 1} de ${n}`}</span>
-              </div>
-              {c.veiculo && <div className="veiculo">{c.veiculo}</div>}
-              <div className="anexo-tit">{vazio(c.titulo, '[Título da publicação]')}</div>
-              <div className="meta4">
-                <div><div className="k">PUBLICAÇÃO</div><div className="v">{vazio(c.dataPost, '—')}</div></div>
-                <div><div className="k">COLETA</div><div className="v">{vazio(c.dataColeta, '—')}</div></div>
-                <div><div className="k">AUTORIA</div><div className="v">{vazio(c.autoria, '—')}</div></div>
-                <div><div className="k">LINK</div><div className="v link">{c.link ? <a href={c.link}>{c.link.replace(/^https?:\/\/(www\.)?/, '')}</a> : '[inserir link]'}</div></div>
-              </div>
-              <div className="tags">
-                {r.protagonismo && <span style={{ borderColor: 'var(--petroleo)', color: 'var(--petroleo)' }}>Protagonismo: {r.protagonismo}</span>}
-                {c.tonalidade && <span style={{ borderColor: COR_TOM[c.tom], color: COR_TOM[c.tom] }}>Tonalidade: {c.tonalidade}</span>}
-              </div>
-              <div className="resumo">
-                <div className="rot">{`O que a ${imprensa ? 'matéria' : 'publicação'} diz sobre o Sicoob`}</div>
-                <p>{rico(vazio(c.trecho, '[Trecho sobre o Sicoob]'))}</p>
-              </div>
-              <div className="area-print">
-                <svg aria-hidden="true"><rect rx="5.76" fill="none" stroke="#A9B5B9" strokeWidth=".99" strokeDasharray="3.97 2.98" /></svg>
-                {id ? (
-                  <>
-                    {/* na tela: pré-visualização do arquivo */}
-                    <div className="print-hidden absolute inset-0">
-                      <iframe src={`/api/relatorios/file?id=${id}`} className="w-full h-full border-none" title={`Anexo ${i + 1}`} />
-                    </div>
-                    {/* na impressão: imagem gerada pelo PrintController */}
-                    <div className="hidden print:block absolute inset-0 bg-white" id={`print-container-cover-${c.idUnico}`} />
-                  </>
-                ) : (
-                  <div className="vazio">
-                    <b>{imprensa ? 'MATÉRIA NA ÍNTEGRA' : 'PUBLICAÇÃO NA ÍNTEGRA'}</b>
-                    Nenhum print na COLUNA PRINT da planilha.
-                  </div>
-                )}
-              </div>
-            </div>
-            <Rodape />
-          </section>
-        );
-      })}
-    </>
-  );
-}
-
 /* ============================== documento ============================== */
 
 export default function Relatorio({ r }: { r: Dados }) {
@@ -358,7 +244,9 @@ export default function Relatorio({ r }: { r: Dados }) {
       <Pagina1 r={r} />
       <Pagina2 r={r} linha={linha} />
       <Pagina3 r={r} linha={linha} />
-      <Anexos r={r} linha={linha} />
+      {r.clippings.map((c, i) => (
+        <Anexo key={c.idUnico} clip={c} indice={i} total={r.clippings.length} linha={linha} protagonismo={r.protagonismo} />
+      ))}
     </>
   );
 }

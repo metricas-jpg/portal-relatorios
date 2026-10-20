@@ -1,161 +1,47 @@
 'use client';
-import { useState } from 'react';
 
-declare global { interface Window { pdfjsLib: any; } }
+import { useEffect, useRef, useState } from 'react';
 
-export default function PrintController({ clippings }: { clippings: any[] }) {
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [total, setTotal] = useState(0);
+/**
+ * Botão "Gerar Relatório Final": espera os prints dos anexos terminarem de carregar
+ * (eles já aparecem na tela como vão sair no PDF) e abre a janela de impressão / salvar como PDF.
+ */
+export default function PrintController({ totalAnexos }: { totalAnexos: number }) {
+  const [pendentes, setPendentes] = useState(0);
+  const [esperando, setEsperando] = useState(false);
+  const esperandoRef = useRef(false);
 
-  const extractDriveId = (url: string) => {
-    if (!url) return null;
-    const match = url.match(/[-\w]{25,}/);
-    return match ? match[0] : null;
-  };
+  const imprimir = () => { esperandoRef.current = false; setEsperando(false); setTimeout(() => window.print(), 300); };
 
-  // Carrega a biblioteca de conversão de PDF de forma segura
-  const loadPdfJs = async () => {
-    if (window.pdfjsLib) return;
-    return new Promise<void>((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Falha ao baixar o conversor'));
-      document.head.appendChild(script);
-    });
-  };
+  useEffect(() => {
+    const atualizar = () => {
+      const n = window.__anexosPendentes || 0;
+      setPendentes(n);
+      if (n === 0 && esperandoRef.current) imprimir();
+    };
+    window.addEventListener('anexos-mudou', atualizar);
+    atualizar();
+    return () => window.removeEventListener('anexos-mudou', atualizar);
+  }, []);
 
-  const handlePrint = async () => {
-    setLoading(true);
-    try {
-      await loadPdfJs();
-    } catch (e) {
-      alert('Houve um erro de rede ao tentar carregar o conversor de PDF. Tente novamente.');
-      setLoading(false);
-      return;
-    }
-    
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-    const clipsComAnexo = clippings.filter(c => c.printUrl);
-    setTotal(clipsComAnexo.length);
-    let current = 0;
-
-    for (const clip of clipsComAnexo) {
-      current++;
-      setProgress(current);
-      
-      const id = extractDriveId(clip.printUrl);
-      if (!id) continue;
-
-      const coverContainer = document.getElementById(`print-container-cover-${clip.idUnico}`);
-      const clippingPageNode = document.getElementById(`clipping-page-${clip.idUnico}`);
-      if (!coverContainer || !clippingPageNode || coverContainer.dataset.processed === 'true') continue;
-
-      try {
-        const res = await fetch(`/api/relatorios/file?id=${id}&download=true`);
-        const blob = await res.blob();
-
-        if (blob.type.includes('image')) {
-          const url = URL.createObjectURL(blob);
-          const img = new Image();
-          img.src = url;
-          await new Promise(resolve => { img.onload = resolve; });
-
-          // proporção real da área do print nesta página (ela encolhe quando o resumo é longo)
-          const area = coverContainer.parentElement;
-          const proporcao = area && area.clientWidth ? area.clientHeight / area.clientWidth : 411.4 / 531.6;
-          const sliceHeight = img.width * proporcao;
-
-          if (img.height > sliceHeight * 1.15) {
-            const totalSlices = Math.ceil(img.height / sliceHeight);
-            let insertAfterNode = clippingPageNode;
-
-            for (let i = 0; i < totalSlices; i++) {
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d')!;
-              canvas.width = img.width; canvas.height = sliceHeight;
-              ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-              
-              const sourceY = i * sliceHeight;
-              const currentSliceHeight = Math.min(sliceHeight, img.height - sourceY);
-              ctx.drawImage(img, 0, sourceY, img.width, currentSliceHeight, 0, 0, img.width, currentSliceHeight);
-
-              const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-
-              if (i === 0) {
-                coverContainer.innerHTML = `<img src="${dataUrl}" style="width:100%; height:100%; object-fit:contain;" />`;
-              } else {
-                const newSection = document.createElement('section');
-                newSection.className = 'page custom-print-page';
-                newSection.innerHTML = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#fff;"><img src="${dataUrl}" style="max-width:100%; max-height:100%; object-fit:contain;" /></div>`;
-                insertAfterNode.insertAdjacentElement('afterend', newSection);
-                insertAfterNode = newSection;
-              }
-            }
-          } else {
-            coverContainer.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain;" />`;
-          }
-          coverContainer.dataset.processed = 'true';
-          continue;
-        }
-
-        const arrayBuffer = await blob.arrayBuffer();
-        const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        coverContainer.innerHTML = ''; 
-
-        const page1 = await pdf.getPage(1);
-        const viewport1 = page1.getViewport({ scale: 2.0 });
-        const canvas1 = document.createElement('canvas');
-        const ctx1 = canvas1.getContext('2d')!;
-        canvas1.width = viewport1.width; canvas1.height = viewport1.height;
-        ctx1.fillStyle = '#ffffff'; ctx1.fillRect(0, 0, canvas1.width, canvas1.height);
-        await page1.render({ canvasContext: ctx1, viewport: viewport1 }).promise;
-        coverContainer.innerHTML = `<img src="${canvas1.toDataURL('image/jpeg', 0.95)}" style="width:100%; height:100%; object-fit:contain;" />`;
-
-        let insertAfterNode = clippingPageNode;
-        for (let pageNum = 2; pageNum <= pdf.numPages; pageNum++) {
-          const page = await pdf.getPage(pageNum);
-          const viewport = page.getViewport({ scale: 2.0 });
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d')!;
-          canvas.width = viewport.width; canvas.height = viewport.height;
-          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-          await page.render({ canvasContext: ctx, viewport }).promise;
-          
-          const newSection = document.createElement('section');
-          newSection.className = 'page custom-print-page';
-          newSection.innerHTML = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#fff;"><img src="${canvas.toDataURL('image/jpeg', 0.95)}" style="max-width:100%; max-height:100%; object-fit:contain;" /></div>`;
-          insertAfterNode.insertAdjacentElement('afterend', newSection);
-          insertAfterNode = newSection; 
-        }
-
-        coverContainer.dataset.processed = 'true';
-      } catch (e) {
-        console.error(`Erro ao converter arquivo do clip ${clip.idUnico}:`, e);
-        coverContainer.innerHTML = `<span class="t z10 b c-cinza c" style="width:100%; text-align:center;">Erro ao renderizar anexo. Verifique o link no Google Drive.</span>`;
-      }
-    }
-
-    setLoading(false);
-    setTimeout(() => window.print(), 500); 
+  const gerar = () => {
+    if ((window.__anexosPendentes || 0) > 0) { esperandoRef.current = true; setEsperando(true); }
+    else window.print();
   };
 
   return (
     <>
-      <button onClick={handlePrint} className="bg-[#00AE9D] hover:bg-[#008f81] text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition shadow-md border border-[#00AE9D]/30">
+      <button onClick={gerar} className="bg-[#00AE9D] hover:bg-[#008f81] text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition shadow-md border border-[#00AE9D]/30">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-        <span className="hidden sm:inline">Gerar Relatório Final</span>
+        <span className="hidden sm:inline">{pendentes > 0 ? `Carregando ${pendentes} de ${totalAnexos} anexo(s)…` : 'Gerar Relatório Final'}</span>
         <span className="sm:hidden">Gerar Relatório</span>
       </button>
 
-      {loading && (
+      {esperando && (
         <div className="print-hidden fixed inset-0 bg-[#003641]/95 z-[9999] flex flex-col items-center justify-center text-white backdrop-blur-sm">
           <div className="w-14 h-14 border-4 border-[#00AE9D] border-t-transparent rounded-full animate-spin mb-6"></div>
-          <h2 className="text-2xl font-bold mb-2">Processando anexos e montando PDF...</h2>
-          <p className="text-[#CADB2A] font-medium text-sm">Preparando anexo {progress} de {total} para alta resolução.</p>
-          <p className="text-slate-400 text-xs mt-6">Fatiando matérias e gerando folhas... Não feche a janela.</p>
+          <h2 className="text-2xl font-bold mb-2">Terminando de carregar os anexos…</h2>
+          <p className="text-[#CADB2A] font-medium text-sm">Faltam {pendentes} de {totalAnexos}. A janela de impressão abre sozinha em seguida.</p>
         </div>
       )}
     </>
