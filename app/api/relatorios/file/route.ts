@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { google } from 'googleapis';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { emailPodeEntrar, arquivoPermitido } from '@/lib/acesso';
 import { Readable } from 'stream';
 
 export async function GET(req: NextRequest) {
   try {
     // 1. Verifica autenticação no portal
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    if (!emailPodeEntrar(session?.user?.email)) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -18,6 +19,11 @@ export async function GET(req: NextRequest) {
 
     if (!fileId) {
       return NextResponse.json({ error: 'ID do arquivo não fornecido' }, { status: 400 });
+    }
+
+    // Só entrega arquivos listados nas planilhas do portal ou do gerador
+    if (!(await arquivoPermitido(fileId))) {
+      return NextResponse.json({ error: 'Arquivo não encontrado' }, { status: 404 });
     }
 
     // 2. Conecta via Service Account
