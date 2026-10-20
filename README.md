@@ -50,9 +50,8 @@ Recomendados (sem eles o relatório mostra `[__]` ou esconde o item, e o painel 
 | `edicao_numero` | Edição nº |
 | `periodo_inicio` | Início do período desta edição (ex.: `03/10/2026, 09h`). Define o "Período" e o cálculo de **Novas menções** |
 | `risco_tendencia`, `status_tendencia` | Ex.: `Estável`, `Subindo`, `Caindo` (vira →, ↑, ↓) |
-| `analise_revisao_data` | Última revisão do texto de contexto |
 
-Opcionais: `leitura_acionamentos` (bloco "Leitura" abaixo da tabela), `novas_mencoes_detalhe` (substitui o "Última: dd/mm (veículo)" calculado), `titulo_orgao`, `titulo_o_que_mudou`, `titulo_o_que_significa`.
+Opcionais: `analise_revisao_data` ("Última revisão: …" na página 3; some quando vazio), `leitura_acionamentos` (bloco "Leitura" abaixo da tabela), `novas_mencoes_detalhe` (substitui o "Última: dd/mm (veículo)" calculado), `titulo_orgao`, `titulo_o_que_mudou`, `titulo_o_que_significa`.
 
 Em qualquer texto, `**trecho**` sai em negrito.
 

@@ -112,7 +112,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const esperados: [string, string][] = [
     ['titulo_crise', 'título do caso'], ['subtitulo_unidade', 'unidade'], ['edicao_numero', 'número da edição'],
     ['periodo_inicio', 'início do período desta edição'], ['risco_tendencia', 'tendência do risco'],
-    ['status_tendencia', 'tendência do status'], ['analise_revisao_data', 'data de revisão da análise'],
+    ['status_tendencia', 'tendência do status'],
   ];
   if (!geral.erro_api) {
     const faltando = esperados.filter(([k]) => !(geral[k] || '').trim()).map(([k, d]) => `${k} (${d})`);

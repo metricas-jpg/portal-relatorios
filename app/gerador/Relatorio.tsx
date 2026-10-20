@@ -258,7 +258,7 @@ function Pagina3({ r, linha }: { r: Dados; linha: string }) {
   const S1 = 'Análise do caso', S2 = 'Gatilhos de escalada';
   const blocos: Bloco[] = [
     { id: 'h', no: <div className="h2">{S1}</div>, manterComProximo: true, secao: S1, inicioSecao: true },
-    { id: 'ref', no: <p className="ref">{`Texto de referência: escrito na abertura do caso e revisado só quando o papel do Sicoob mudar.  Última revisão: ${vazio(a.revisao)}.`}</p>, secao: S1 },
+    { id: 'ref', no: <p className="ref">{`Texto de referência: escrito na abertura do caso e revisado só quando o papel do Sicoob mudar.  ${a.revisao.trim() ? `  Última revisão: ${a.revisao.trim()}.` : ''}`}</p>, secao: S1 },
     { id: 'man', no: <p className="manchete">{rico(vazio(a.manchete, '[Mensagem principal sobre a posição do Sicoob no caso]'))}</p>, secao: S1 },
     {
       id: 'cards', secao: S1, no: (
