@@ -98,7 +98,16 @@ function Pagina1({ r }: { r: Dados }) {
       {card(32.4, 327.6, 99.6, 86.4, K1, '--rck', { background: 'var(--petroleo)' })}
       <span className="t z7 b c-branco" style={st(mv(343.2, K1), 43.2)}>{'NOVAS MENÇÕES\nAO SICOOB'}</span>
       <span className="t z26 b c-branco" style={st(mv(387.7, K2), 43.2)}>{r.novas.qtd}</span>
-      <span className="t z7 c-lima lim1" data-limite="Detalhe de novas menções" style={st(mv(401.5, K2), 43.2, { width: '78pt' })}>{r.novas.detalhe}</span>
+      {/* "Última: 19/10 (Veículo)": se não couber numa linha, o veículo desce para a 2ª linha (AjustePagina1) */}
+      {(() => {
+        const i = r.novas.detalhe.indexOf(' (');
+        const [a, b] = i > 0 ? [r.novas.detalhe.slice(0, i), r.novas.detalhe.slice(i + 1)] : [r.novas.detalhe, ''];
+        return (
+          <span className="t z7 c-lima det" data-encaixe="Detalhe de novas menções" style={st(mv(401.5, K2), 43.2, { width: '78pt' })}>
+            {a}{b && <> <span className="det-b">{b}</span></>}
+          </span>
+        );
+      })()}
 
       {card(142.8, 327.6, 99.6, 86.4, K1, '--rck')}
       <span className="t z7 b c-cinza" style={st(mv(343.2, K1), 153.6)}>{'MENÇÕES GERAIS\nAO TEMA'}</span>

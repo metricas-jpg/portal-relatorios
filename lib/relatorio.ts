@@ -73,6 +73,20 @@ export function lerData(texto: string, ref?: DataLida | null): DataLida | null {
   const hora = h ? Math.min(23, +h[1]) : 0, min = h && h[2] ? +h[2] : 0;
   return { ts: new Date(ano, mes - 1, dia, hora, min).getTime(), dia, mes, ano, temHora: !!h };
 }
+/**
+ * Datas com hora vindas da planilha com validação de data ("18/10/2026 09", "18/10/2026 09:30",
+ * "18/10/2026 09:00:00") viram o formato do relatório: "18/10/2026, 09h" / "18/10/2026, 09h30".
+ * Datas sem hora ficam como estão; textos que não são data também.
+ */
+export function formatarDataHora(valor: string): string {
+  const t = (valor || '').trim();
+  const m = t.match(/^(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)(?:[\s,]+(\d{1,2})(?:\s*[:h]\s*(\d{2}))?(?::\d{2})?\s*h?)?$/i);
+  if (!m) return t;
+  const [, data, hora, min] = m;
+  if (hora === undefined) return data;
+  return `${data}, ${hora.padStart(2, '0')}h${min && min !== '00' ? min : ''}`;
+}
+
 const ddmm = (d: DataLida) => `${String(d.dia).padStart(2, '0')}/${String(d.mes).padStart(2, '0')}`;
 const chaveDia = (d: DataLida) => d.ano * 10000 + d.mes * 100 + d.dia;
 
@@ -115,7 +129,10 @@ function tomDaTonalidade(t: string): Tom | null {
 }
 
 export function montarRelatorio(dados: RelatorioDados): Relatorio {
-  const { geral = {}, registros = [], acionamentos = [] } = dados;
+  const { registros = [], acionamentos = [] } = dados;
+  // datas de Configuracoes_Gerais no formato do relatório (a validação da planilha não traz o "h")
+  const geral: Record<string, string> = { ...(dados.geral || {}) };
+  (['periodo_inicio', 'inicio_monitoramento', 'ultima_atualizacao'] as const).forEach(k => { if (geral[k]) geral[k] = formatarDataHora(geral[k]); });
   const avisos: string[] = [];
   if (geral.erro_api) avisos.push(`Erro de conexão com a planilha: ${geral.erro_api}`);
   avisos.push(...(dados.avisosLeitura || []));
@@ -210,7 +227,9 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
       avisos.push(`Registro_Central, linha ${r.linha}: envolve o Sicoob mas a tonalidade "${r.tonalidade || 'vazia'}" não é NEGATIVA, NEUTRA ou POSITIVA; aparece como [A CLASSIFICAR].`);
     }
     if (!texto) avisos.push(`Registro_Central, linha ${r.linha}: marcado para a linha do tempo, mas sem texto.`);
-    return { item: { data: r.dataPost || '', texto, tom, complemento } as ItemTimeline, ts: r.dPost?.ts, proximo: r.proximoMarco, ordem };
+    // data completa (19/10/2026) aparece como dd/mm, igual ao modelo; faixas e textos ficam como estão
+    const data = r.dPost && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(r.dataPost.trim()) ? ddmm(r.dPost) : (r.dataPost || '');
+    return { item: { data, texto, tom, complemento } as ItemTimeline, ts: r.dPost?.ts, proximo: r.proximoMarco, ordem };
   });
   // Próximo marco primeiro; depois do mais recente para o mais antigo; itens sem data no fim
   itens.sort((a, b) =>

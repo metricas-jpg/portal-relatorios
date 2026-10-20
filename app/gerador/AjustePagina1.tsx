@@ -27,6 +27,17 @@ export default function AjustePagina1() {
     (document.fonts?.ready ?? Promise.resolve()).then(() => {
       const pagina = document.getElementById('p1');
       if (cancelado || !pagina) return;
+
+      // textos curtos que precisam caber numa largura fixa (ex.: "Última: 19/10 (Veículo)" no card escuro):
+      // 1º quebra em 2 linhas no ponto previsto; 2º reduz a fonte até 6pt; só então corta e avisa
+      pagina.querySelectorAll<HTMLElement>('[data-encaixe]').forEach(el => {
+        const cabe = () => el.scrollWidth <= el.clientWidth + 1;
+        if (cabe()) return;
+        if (el.querySelector('.det-b')) { el.classList.add('duas'); if (cabe()) return; }
+        for (const fs of [6.5, 6]) { el.style.setProperty('--fs', `${fs}pt`); if (cabe()) return; }
+        avisarRelatorio(`Página 1 · “${el.dataset.encaixe}” não coube mesmo em 2 linhas e com fonte menor; foi cortado. Encurte o texto na planilha.`);
+      });
+
       const els = [...pagina.querySelectorAll<HTMLElement>('[data-elastico]')];
       if (els.length !== 2) return;
 
