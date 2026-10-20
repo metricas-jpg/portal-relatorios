@@ -83,6 +83,18 @@
 .doc .grafico { pointer-events: none; }
 .doc .grafico .t { pointer-events: auto; }
 
+/*
+  Página 1 elástica: quando "O que mudou" / "O que significa" passam do tamanho ideal, o AjustePagina1
+  tira espaço em branco do cabeçalho, depois dos cards e por último da altura das barras do gráfico.
+  As fontes nunca mudam. Valores padrão = layout original.
+*/
+.doc #p1 {
+  --dh1: 0pt; --dh2: 0pt; --dh3: 0pt; --rbg: 0pt;          /* cabeçalho */
+  --dc1: 0pt; --dc2: 0pt; --rcr: 0pt;                      /* cards de risco e status */
+  --dk1: 0pt; --dk2: 0pt; --rck: 0pt;                      /* cards de indicadores */
+  --dt: 0pt; --dsep: 0pt; --dg: 0pt; --altmax: 121.2pt;    /* textos e gráfico */
+}
+
 /* coluna esquerda das seções "O que mudou" / "O que significa" (página 1) */
 .doc .col-esq { left: 32.4pt; width: 120pt; display: flex; flex-direction: column; }
 .doc .col-esq .tit { font: 700 8.5pt/10.2pt var(--font); color: var(--turquesa); max-width: 96pt; text-transform: uppercase; --lh: 10.2pt; }
@@ -167,12 +179,11 @@
 .doc .veiculo { font: 700 9.5pt/11.4pt var(--font); color: var(--turquesa); margin-top: 13.5pt; }
 .doc .anexo-tit { font: 700 15pt/18.9pt var(--font); color: var(--petroleo); margin-top: 8.65pt;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
-.doc .meta4 { display: grid; grid-template-columns: repeat(4, 126.2pt); gap: 8.6pt; margin-top: 16.45pt; }
-.doc .meta4 > div { background: var(--card); border-radius: 5.76pt; height: 43.2pt; padding: 6.15pt 9.4pt 0; min-width: 0; }
-.doc .meta4 .k { font: 700 6.5pt/7.8pt var(--font); color: var(--cinza); }
-.doc .meta4 .v { font: 700 9pt/10.8pt var(--font); color: var(--texto); margin-top: 6.73pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.doc .meta4 .v.link { font-weight: 400; font-style: italic; color: var(--cinza); }
-.doc .meta4 .v a { color: inherit; text-decoration: none; }
+/* 3 caixas (sem o link, a pedido do cliente): ocupam a largura toda, com espaço maior entre elas */
+.doc .meta3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14.4pt; margin-top: 16.45pt; }
+.doc .meta3 > div { background: var(--card); border-radius: 5.76pt; height: 43.2pt; padding: 6.15pt 9.4pt 0; min-width: 0; }
+.doc .meta3 .k { font: 700 6.5pt/7.8pt var(--font); color: var(--cinza); }
+.doc .meta3 .v { font: 700 9pt/10.8pt var(--font); color: var(--texto); margin-top: 6.73pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .doc .tags { display: flex; gap: 8.6pt; margin-top: 12.5pt; }
 .doc .tags span { height: 19.69pt; padding: 0 18.7pt; border: .99pt solid; border-radius: 9.85pt; background: #fff;
   font: 700 7pt/17.71pt var(--font); text-transform: uppercase; white-space: nowrap; }

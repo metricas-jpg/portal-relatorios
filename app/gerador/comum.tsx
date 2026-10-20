@@ -4,8 +4,11 @@ import { normalizar, type Tom } from '@/lib/relatorio';
 /* Peças comuns às páginas do relatório (usadas no servidor e no navegador). */
 
 /** estilo de um texto posicionado pela linha de base (--b) */
-export const st = (b: number, left?: number, extra?: CSSProperties) =>
-  ({ '--b': `${b}pt`, ...(left !== undefined && { left: `${left}pt` }), ...extra }) as CSSProperties;
+export const st = (b: number | string, left?: number, extra?: CSSProperties) =>
+  ({ '--b': typeof b === 'number' ? `${b}pt` : b, ...(left !== undefined && { left: `${left}pt` }), ...extra }) as CSSProperties;
+
+/** medida em pt deslocada por uma variável CSS (página 1 elástica) */
+export const mv = (valor: number, variavel: string, sinal: '+' | '-' = '+') => `calc(${valor}pt ${sinal} var(${variavel}))`;
 
 /** limite de linhas; ultrapassar gera aviso no painel */
 export const lim = (linhas: number, largura: number) =>
