@@ -28,7 +28,7 @@ export function AcessoRestrito({ email }: { email?: string | null }) {
   return (
     <div className="min-h-screen bg-[#00262e] flex flex-col items-center justify-center text-center px-4">
       <h1 className="text-4xl font-bold text-white mb-4">Acesso Restrito</h1>
-      <p className="text-slate-300 mb-8 max-w-md">O e-mail <strong>{email || 'Desconhecido'}</strong> não tem acesso ao gerador. Peça a inclusão na aba Acessos_Gerador da planilha.</p>
+      <p className="text-slate-300 mb-8 max-w-md">O e-mail <strong>{email || 'Desconhecido'}</strong> não tem acesso ao gerador, que é restrito a e-mails da Loggia.</p>
       <Link href="/" className="bg-[#00AE9D] text-white px-6 py-3 rounded-xl font-bold">Voltar</Link>
     </div>
   );

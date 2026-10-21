@@ -15,7 +15,7 @@ Next.js 16 na Vercel, com login Google (NextAuth) e dados em planilhas Google li
 | `GOOGLE_SHEET_ID` | Planilha do **portal** (aba `Relatorios`) |
 | `PLANILHA_CENTRAL_ID` | Planilha central com a lista de monitoramentos (padrão: *Monitoramentos Diários 2026*) |
 | `PLANILHA_CENTRAL_ABA` | Aba da lista (padrão: `Monitoramentos 2026`) |
-| `SPREADSHEET_ID` | Planilha com a aba `Acessos_Gerador`. Também aparece no gerador como "Planilha padrão", se não estiver na lista central |
+| `GERADOR_DOMINIOS` | Opcional. Domínios que usam o gerador, separados por vírgula. Padrão: `loggia.com.br` |
 | `ALLOWED_EMAIL_DOMAINS` | Domínios que podem entrar no portal, separados por vírgula (ex.: `loggia.com.br,sicoob.com.br`) |
 | `ALLOWED_EMAILS` | E-mails avulsos que podem entrar, separados por vírgula |
 
@@ -25,7 +25,7 @@ Sem `ALLOWED_EMAIL_DOMAINS` e `ALLOWED_EMAILS`, qualquer conta Google consegue e
 
 - **Portal**: só quem passa na lista acima. `/api/relatorios`, `/api/relatorios/file` e `/api/relatorios/thumbnail` exigem login.
 - **Arquivos do Drive**: as rotas só entregam arquivos cujo ID aparece na aba `Relatorios` ou na `COLUNA PRINT` do `Registro_Central`.
-- **Gerador**: e-mails da aba `Acessos_Gerador`. Se a aba estiver vazia, vale o domínio `@loggia.com.br`.
+- **Gerador**: e-mails do domínio `@loggia.com.br` (ou os de `GERADOR_DOMINIOS`).
 
 ## Gerador
 

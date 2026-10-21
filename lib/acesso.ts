@@ -10,8 +10,8 @@ import { obterMonitoramento } from './planilhas';
  *    ALLOWED_EMAILS (e-mails avulsos). Se nenhuma estiver definida, o login continua
  *    aberto a qualquer conta Google, como antes, e um aviso é registrado no log.
  *
- * 2. Quem pode usar o GERADOR: e-mails da aba "Acessos_Gerador" da planilha do gerador.
- *    Se a aba estiver vazia ou não puder ser lida, vale o domínio @loggia.com.br.
+ * 2. Quem pode usar o GERADOR: e-mails do domínio @loggia.com.br (ou os domínios da
+ *    variável GERADOR_DOMINIOS).
  *
  * 3. Quais ARQUIVOS do Drive o portal entrega: só os que aparecem na aba "Relatorios"
  *    (portal) ou no "Registro_Central" da planilha de monitoramento do relatório aberto.
@@ -51,30 +51,15 @@ export function emailPodeEntrar(email?: string | null): boolean {
 }
 
 // ---------- 2. Gerador ----------
-let cacheGerador: { em: number; emails: string[] } | null = null;
-
-async function emailsDoGerador(): Promise<string[]> {
-  if (cacheGerador && Date.now() - cacheGerador.em < CACHE_MS) return cacheGerador.emails;
-  try {
-    const res = await sheetsClient().spreadsheets.values.get({
-      spreadsheetId: process.env.SPREADSHEET_ID,
-      range: 'Acessos_Gerador!A2:A',
-    });
-    const emails = (res.data.values || []).map(l => String(l[0] || '').trim().toLowerCase()).filter(e => e.includes('@'));
-    cacheGerador = { em: Date.now(), emails };
-    return emails;
-  } catch (e) {
-    console.error('[acesso] Não foi possível ler a aba Acessos_Gerador:', (e as Error).message);
-    return [];
-  }
-}
-
-export async function emailPodeGerar(email?: string | null): Promise<boolean> {
+/**
+ * Domínios que usam o gerador. Fica no servidor (código ou variável da Vercel), fora do alcance
+ * de quem usa o site. Padrão: loggia.com.br; GERADOR_DOMINIOS="a.com.br,b.com.br" substitui.
+ */
+export function emailPodeGerar(email?: string | null): boolean {
   if (!email || !emailPodeEntrar(email)) return false;
+  const dominios = lista(process.env.GERADOR_DOMINIOS);
   const e = email.toLowerCase();
-  const autorizados = await emailsDoGerador();
-  if (autorizados.length) return autorizados.includes(e);
-  return e.endsWith('@' + DOMINIO_GERADOR);
+  return (dominios.length ? dominios : [DOMINIO_GERADOR]).some(d => e.endsWith('@' + d));
 }
 
 // ---------- 3. Arquivos do Drive ----------
@@ -111,7 +96,8 @@ export async function arquivoPermitido(fileId: string, planilhaId?: string | nul
     }, fileId);
     if (ids.has(fileId)) return true;
   }
-  const planilha = planilhaId && (await obterMonitoramento(planilhaId)) ? planilhaId : process.env.SPREADSHEET_ID;
+  // só planilhas cadastradas na planilha central
+  const planilha = planilhaId && (await obterMonitoramento(planilhaId)) ? planilhaId : null;
   if (!planilha) return false;
   const ids = await idsDaFonte(`registro:${planilha}`, async () => {
     // lê também o link por trás de chips e hiperlinks

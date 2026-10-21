@@ -23,7 +23,7 @@ interface Props {
 /** Etapa 2: escolher a edição (pula se só houver uma). Etapa 3: o relatório. */
 export default async function RelatorioPage({ params, searchParams }: Props) {
   const session = await getServerSession(authOptions);
-  if (!(await emailPodeGerar(session?.user?.email))) return <AcessoRestrito email={session?.user?.email} />;
+  if (!emailPodeGerar(session?.user?.email)) return <AcessoRestrito email={session?.user?.email} />;
 
   const { planilha } = await params;
   const pedido = (await searchParams).edicao;

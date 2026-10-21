@@ -52,9 +52,6 @@ export async function listarMonitoramentos(): Promise<{ lista: Monitoramento[]; 
       ? `O site não tem acesso à planilha central. Compartilhe-a com ${process.env.GOOGLE_CLIENT_EMAIL || 'a conta de serviço do site'} como leitor.`
       : 'Não foi possível ler a planilha central.';
   }
-  // transição: a planilha antiga (SPREADSHEET_ID) continua disponível se não estiver na lista
-  const antiga = process.env.SPREADSHEET_ID;
-  if (antiga && !lista.some(m => m.id === antiga)) lista.push({ id: antiga, nome: 'Planilha padrão (SPREADSHEET_ID)' });
   lista = lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   cache = { em: Date.now(), lista, erro };
   return cache;

@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 /** Etapa 1: escolher o monitoramento (lista da planilha central). */
 export default async function GeradorPage() {
   const session = await getServerSession(authOptions);
-  if (!(await emailPodeGerar(session?.user?.email))) return <AcessoRestrito email={session?.user?.email} />;
+  if (!emailPodeGerar(session?.user?.email)) return <AcessoRestrito email={session?.user?.email} />;
 
   const { lista, erro } = await listarMonitoramentos();
   return (
