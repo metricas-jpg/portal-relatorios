@@ -60,7 +60,7 @@ function Pagina1({ r }: { r: Dados }) {
   ] as const;
   const quadrados = [[321.7, 361, 'roxo'], [321.7, 376.9, 'turquesa'], [321.7, 392.7, 'petroleo'], [383.5, 361, 'verde'], [383.5, 376.9, 'lima'], [383.5, 392.7, 'laranja']] as const;
   const legGrafico = [[32.4, 43.9], [102.2, 113.8], [176.8, 188.3], [251.3, 262.8], [321.1, 332.6], [391, 402.5]] as const;
-  const nAc = r.acionamentos.linhas.length;
+  const nAc = r.acionamentos.novos;
   // deslocamentos da página elástica (ver gerador.css e AjustePagina1)
   const H1 = '--dh1', H2 = '--dh2', H3 = '--dh3', C1 = '--dc1', C2 = '--dc2', K1 = '--dk1', K2 = '--dk2', T = '--dt', SEP = '--dsep', G = '--dg';
   const card = (left: number, top: number, w: number, h: number, vTop: string, vAlt: string, extra?: CSSProperties) =>
@@ -124,7 +124,7 @@ function Pagina1({ r }: { r: Dados }) {
       {card(463.4, 327.6, 99.6, 86.4, K1, '--rck')}
       <span className="t z7 b c-cinza" style={st(mv(343.2, K1), 474.2)}>{'ACIONAMENTOS\nDE IMPRENSA'}</span>
       <span className="t z26 b c-pet" style={st(mv(387.7, K2), 474.2)}>{nAc}</span>
-      <span className="t z7 c-cinza" style={st(mv(401.5, K2), 474.2)}>{nAc ? `${r.acionamentos.abertos} em aberto` : 'no período'}</span>
+      <span className="t z7 c-cinza" style={st(mv(401.5, K2), 474.2)}>{r.acionamentos.linhas.length ? `novos · ${r.acionamentos.abertos} em aberto` : 'no período'}</span>
 
       {/* o que mudou (tamanho controlado pelo AjustePagina1) */}
       <div className="col-esq" style={{ top: mv(432.45, T) }}>
@@ -168,12 +168,16 @@ function LinhaTimeline({ item }: { item: ItemTimeline }) {
   const ponto = item.tom === 'next' ? 'next' : item.tom === 'ctx' ? 'p' : `g ${item.tom}`;
   const tag = TAG[item.tom];
   return (
-    <div className={`tl-row ${item.tom}`}>
-      <span className="data">{item.tom === 'next' ? 'Próximo' : item.data}</span>
-      <i className={`ponto ${ponto}`} />
-      <div className="txt">{rico(item.texto)}{item.complemento && <> <b>[{item.complemento}]</b></>}</div>
-      {tag && <span className={`tag ${tag[1]}`}>{tag[0]}</span>}
-    </div>
+    <>
+      <div className={`tl-row ${item.tom}`}>
+        <span className="data">{item.tom === 'next' ? 'Próximo' : item.data}</span>
+        <i className={`ponto ${ponto}`} />
+        <div className="txt">{rico(item.texto)}{item.complemento && <> <b>[{item.complemento}]</b></>}</div>
+        {tag && <span className={`tag ${tag[1]}`}>{tag[0]}</span>}
+      </div>
+      {/* fim das novidades desta edição: daqui para baixo, edições anteriores */}
+      {item.divisaoAbaixo && <div className="tl-divisao"><span>▲ Nesta edição&nbsp;&nbsp;·&nbsp;&nbsp;▼ Edições anteriores</span></div>}
+    </>
   );
 }
 
@@ -254,7 +258,7 @@ function Pagina3({ r, linha }: { r: Dados; linha: string }) {
 
 /* ============================== documento ============================== */
 
-export default function Relatorio({ r }: { r: Dados }) {
+export default function Relatorio({ r, planilha }: { r: Dados; planilha: string }) {
   const linha = `${vazio(r.titulo, '[Título]')} · ${vazio(r.unidade, '[Unidade]')} · EDIÇÃO DE ${vazio(r.ultimaAtualizacao)}`.toUpperCase();
   return (
     <>
@@ -262,7 +266,7 @@ export default function Relatorio({ r }: { r: Dados }) {
       <Pagina2 r={r} linha={linha} />
       <Pagina3 r={r} linha={linha} />
       {r.clippings.map((c, i) => (
-        <Anexo key={c.idUnico} clip={c} indice={i} total={r.clippings.length} linha={linha} protagonismo={r.protagonismo} />
+        <Anexo key={c.idUnico} clip={c} indice={i} total={r.clippings.length} linha={linha} protagonismo={r.protagonismo} planilha={planilha} />
       ))}
     </>
   );

@@ -1,4 +1,6 @@
 import { google } from 'googleapis';
+import { lerGrade } from './google-sheets';
+import { obterMonitoramento } from './planilhas';
 
 /**
  * Regras de acesso do portal.
@@ -12,7 +14,7 @@ import { google } from 'googleapis';
  *    Se a aba estiver vazia ou não puder ser lida, vale o domínio @loggia.com.br.
  *
  * 3. Quais ARQUIVOS do Drive o portal entrega: só os que aparecem na aba "Relatorios"
- *    (portal) ou na aba "Registro_Central" (gerador, coluna PRINT).
+ *    (portal) ou no "Registro_Central" da planilha de monitoramento do relatório aberto.
  */
 
 const CACHE_MS = 60_000;
@@ -76,32 +78,45 @@ export async function emailPodeGerar(email?: string | null): Promise<boolean> {
 }
 
 // ---------- 3. Arquivos do Drive ----------
-let cacheArquivos: { em: number; ids: Set<string> } | null = null;
+// Por fonte (planilha do portal ou planilha de monitoramento): IDs de arquivo que aparecem nela.
+const cacheArquivos = new Map<string, { em: number; ids: Set<string> }>();
 const ID_RE = /[-\w]{25,}/g;
 
-export async function arquivoPermitido(fileId: string): Promise<boolean> {
-  if (!/^[-\w]{25,}$/.test(fileId)) return false;
-  // Recarrega a lista se o cache venceu, ou se o arquivo não está nela e a lista tem mais de 5 s
-  // (assim um print recém-adicionado na planilha já funciona sem esperar o cache vencer).
-  const vencido = !cacheArquivos || Date.now() - cacheArquivos.em > CACHE_MS;
-  const ausente = !!cacheArquivos && !cacheArquivos.ids.has(fileId) && Date.now() - cacheArquivos.em > 5_000;
-  if (vencido || ausente) {
-    const ids = new Set<string>();
-    const sheets = sheetsClient();
-    const fontes: [string | undefined, string][] = [
-      [process.env.GOOGLE_SHEET_ID, 'Relatorios!A2:E'],
-      [process.env.SPREADSHEET_ID, 'Registro_Central!A2:Z'], // a coluna PRINT pode mudar de lugar
-    ];
-    for (const [spreadsheetId, range] of fontes) {
-      if (!spreadsheetId) continue;
-      try {
-        const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-        (res.data.values || []).flat().forEach(c => (String(c).match(ID_RE) || []).forEach(id => ids.add(id)));
-      } catch (e) {
-        console.error(`[acesso] Não foi possível ler ${range}:`, (e as Error).message);
-      }
-    }
-    cacheArquivos = { em: Date.now(), ids };
+async function idsDaFonte(chave: string, ler: () => Promise<string[]>, fileId: string) {
+  const c = cacheArquivos.get(chave);
+  // recarrega se venceu, ou se o arquivo não está na lista e ela tem mais de 5 s
+  // (assim um print recém-adicionado na planilha já funciona sem esperar o cache vencer)
+  if (c && (Date.now() - c.em < CACHE_MS) && (c.ids.has(fileId) || Date.now() - c.em < 5_000)) return c.ids;
+  const ids = new Set<string>();
+  try {
+    (await ler()).forEach(t => (t.match(ID_RE) || []).forEach(id => ids.add(id)));
+  } catch (e) {
+    console.error(`[acesso] Não foi possível ler ${chave}:`, (e as Error).message);
   }
-  return cacheArquivos?.ids.has(fileId) ?? false;
+  cacheArquivos.set(chave, { em: Date.now(), ids });
+  return ids;
+}
+
+/**
+ * O arquivo só é entregue se o ID aparecer na aba Relatorios do portal ou no Registro_Central da
+ * planilha de monitoramento informada (que precisa estar na lista da planilha central).
+ */
+export async function arquivoPermitido(fileId: string, planilhaId?: string | null): Promise<boolean> {
+  if (!/^[-\w]{25,}$/.test(fileId)) return false;
+  const portal = process.env.GOOGLE_SHEET_ID;
+  if (portal) {
+    const ids = await idsDaFonte(`portal:${portal}`, async () => {
+      const res = await sheetsClient().spreadsheets.values.get({ spreadsheetId: portal, range: 'Relatorios!A2:E' });
+      return (res.data.values || []).flat().map(String);
+    }, fileId);
+    if (ids.has(fileId)) return true;
+  }
+  const planilha = planilhaId && (await obterMonitoramento(planilhaId)) ? planilhaId : process.env.SPREADSHEET_ID;
+  if (!planilha) return false;
+  const ids = await idsDaFonte(`registro:${planilha}`, async () => {
+    // lê também o link por trás de chips e hiperlinks
+    const grade = await lerGrade(planilha, 'Registro_Central!A2:AZ');
+    return grade.flat().flatMap(c => [c.texto, c.link]);
+  }, fileId);
+  return ids.has(fileId);
 }
