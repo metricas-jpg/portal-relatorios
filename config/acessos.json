@@ -3,13 +3,6 @@
   "acessos": [
     {
       "tipo": "email",
-      "valor": "julia.marques@sicoob.com.br",
-      "area": "portal",
-      "adicionado_por": "metricas@loggia.com.br",
-      "adicionado_em": "2026-10-22T04:26:00.910Z"
-    },
-    {
-      "tipo": "email",
       "valor": "kelly.valente@sicoob.com.br",
       "area": "portal",
       "adicionado_por": "metricas@loggia.com.br",
