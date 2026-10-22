@@ -2,14 +2,14 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 /** Tela das etapas de seleção (fora do relatório), no visual do portal. */
-export function TelaSelecao({ titulo, voltar, children }: { titulo: string; voltar: { href: string; texto: string }; children: ReactNode }) {
+export function TelaSelecao({ titulo, voltar, children, secao = 'Gerador de Relatórios' }: { titulo: string; voltar: { href: string; texto: string }; children: ReactNode; secao?: string }) {
   return (
     <div className="min-h-screen bg-[#f4f7f8] text-[#003641]">
       <header className="bg-[#003641] text-white border-b border-white/10 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
           <Link href={voltar.href} className="text-sm text-slate-300 hover:text-white whitespace-nowrap">← {voltar.texto}</Link>
           <div className="h-6 w-px bg-white/20" />
-          <span className="font-bold">Gerador de Relatórios</span>
+          <span className="font-bold">{secao}</span>
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">

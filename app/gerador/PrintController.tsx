@@ -41,11 +41,21 @@ export default function PrintController({ totalAnexos, nomeArquivo }: { totalAne
 
   return (
     <>
-      <button onClick={gerar} className="bg-[#00AE9D] hover:bg-[#008f81] text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition shadow-md border border-[#00AE9D]/30">
+      <div className="relative group h-fit self-center">
+      <button onClick={gerar} aria-describedby="dica-pdf" className="bg-[#00AE9D] hover:bg-[#008f81] text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition shadow-md border border-[#00AE9D]/30">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
         <span className="hidden sm:inline">{pendentes > 0 ? `Carregando ${pendentes} anexo(s)…` : 'Gerar Relatório Final'}</span>
         <span className="sm:hidden">Gerar Relatório</span>
       </button>
+      {/* dica ao passar o mouse (ou focar com o teclado): o nome do arquivo só vem preenchido em "Salvar como PDF" */}
+      <div
+        id="dica-pdf" role="tooltip"
+        className="pointer-events-none absolute right-0 top-full mt-2 w-72 rounded-lg bg-white text-[#003641] text-xs leading-relaxed p-3 shadow-xl border border-slate-200 opacity-0 translate-y-1 transition group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0 z-50"
+      >
+        Na tela de impressão, em <strong>Destino</strong>, escolha <strong>“Salvar como PDF”</strong>. Assim o arquivo já vem com o nome
+        <span className="block mt-1 font-mono text-[11px] text-slate-500 break-all">{nomeArquivo}.pdf</span>
+      </div>
+      </div>
 
       {esperando && (
         <div className="print-hidden fixed inset-0 bg-[#003641]/95 z-[9999] flex flex-col items-center justify-center text-white backdrop-blur-sm">

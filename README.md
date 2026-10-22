@@ -16,16 +16,27 @@ Next.js 16 na Vercel, com login Google (NextAuth) e dados em planilhas Google li
 | `PLANILHA_CENTRAL_ID` | Planilha central com a lista de monitoramentos (padrão: *Monitoramentos Diários 2026*) |
 | `PLANILHA_CENTRAL_ABA` | Aba da lista (padrão: `Monitoramentos 2026`) |
 | `GERADOR_DOMINIOS` | Opcional. Domínios que usam o gerador, separados por vírgula. Padrão: `loggia.com.br` |
-| `ALLOWED_EMAIL_DOMAINS` | Domínios que podem entrar no portal, separados por vírgula (ex.: `loggia.com.br,sicoob.com.br`) |
-| `ALLOWED_EMAILS` | E-mails avulsos que podem entrar, separados por vírgula |
+| `GITHUB_TOKEN` | Token do GitHub usado pela página `/acessos` para gravar a lista de acessos (ver abaixo) |
+| `ALLOWED_EMAIL_DOMAINS`, `ALLOWED_EMAILS` | Opcionais e antigas: domínios e e-mails extras com acesso ao portal. Prefira a página `/acessos` |
 
-Sem `ALLOWED_EMAIL_DOMAINS` e `ALLOWED_EMAILS`, qualquer conta Google consegue entrar (comportamento antigo). Defina pelo menos uma das duas.
+### Lista de acessos (`/acessos`)
+
+Além dos e-mails `@loggia.com.br`, só entra quem está na lista de acessos (`config/acessos.json`). Os administradores (lista `ADMINS` em `lib/acessos.ts`) veem um ícone de compartilhamento no cabeçalho do portal, que abre a página `/acessos`. Lá eles adicionam e-mails ou domínios inteiros, escolhendo **Portal** (consulta os relatórios) ou **Portal + gerador**.
+
+Cada alteração vira um commit no `main` com quem fez, e a Vercel republica o site: a mudança vale em 1 a 2 minutos.
+
+**Configurar o `GITHUB_TOKEN`** (uma vez):
+1. GitHub, logado na conta metricas-jpg → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate new token.
+2. Repository access: **Only select repositories** → `portal-relatorios`.
+3. Permissions → Repository permissions → **Contents: Read and write** (nenhuma outra).
+4. Gere o token, copie e cadastre como `GITHUB_TOKEN` na Vercel (Production). Faça um Redeploy.
+5. Anote a data de expiração: quando vencer, a página avisa e é só gerar outro.
 
 ## Regras de acesso (`lib/acesso.ts`)
 
-- **Portal**: só quem passa na lista acima. `/api/relatorios`, `/api/relatorios/file` e `/api/relatorios/thumbnail` exigem login.
+- **Portal**: e-mails `@loggia.com.br` e os da lista de acessos. `/api/relatorios`, `/api/relatorios/file` e `/api/relatorios/thumbnail` exigem login.
 - **Arquivos do Drive**: as rotas só entregam arquivos cujo ID aparece na aba `Relatorios` ou na `COLUNA PRINT` do `Registro_Central`.
-- **Gerador**: e-mails do domínio `@loggia.com.br` (ou os de `GERADOR_DOMINIOS`).
+- **Gerador**: e-mails do domínio `@loggia.com.br` (ou os de `GERADOR_DOMINIOS`) e os da lista marcados como **Portal + gerador**.
 
 ## Gerador
 
