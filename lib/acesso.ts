@@ -1,24 +1,26 @@
 import { google } from 'googleapis';
 import { lerGrade } from './google-sheets';
 import { obterMonitoramento } from './planilhas';
+import { ADMINS, DOMINIO_LOGGIA, areaNaLista, type ArquivoAcessos } from './acessos';
+import arquivoAcessos from '@/config/acessos.json';
 
 /**
  * Regras de acesso do portal.
  *
- * 1. Quem pode ENTRAR no portal (login Google):
- *    variáveis ALLOWED_EMAIL_DOMAINS (ex.: "loggia.com.br,sicoob.com.br") e/ou
- *    ALLOWED_EMAILS (e-mails avulsos). Se nenhuma estiver definida, o login continua
- *    aberto a qualquer conta Google, como antes, e um aviso é registrado no log.
+ * 1. PORTAL (login Google): e-mails @loggia.com.br, os e-mails e domínios da lista de acessos
+ *    (config/acessos.json, editada pela página /acessos) e os das variáveis ALLOWED_EMAILS e
+ *    ALLOWED_EMAIL_DOMAINS, se existirem. Ninguém mais entra.
  *
- * 2. Quem pode usar o GERADOR: e-mails do domínio @loggia.com.br (ou os domínios da
- *    variável GERADOR_DOMINIOS).
+ * 2. GERADOR: e-mails @loggia.com.br (ou os domínios de GERADOR_DOMINIOS) e os itens da lista
+ *    de acessos marcados como "gerador".
  *
- * 3. Quais ARQUIVOS do Drive o portal entrega: só os que aparecem na aba "Relatorios"
+ * 3. ADMINISTRADORES da lista de acessos: os e-mails de ADMINS (lib/acessos.ts).
+ *
+ * 4. Quais ARQUIVOS do Drive o portal entrega: só os que aparecem na aba "Relatorios"
  *    (portal) ou no "Registro_Central" da planilha de monitoramento do relatório aberto.
  */
 
 const CACHE_MS = 60_000;
-const DOMINIO_GERADOR = 'loggia.com.br';
 
 function lista(v?: string) {
   return (v || '').split(',').map(s => s.trim().toLowerCase().replace(/^@/, '')).filter(Boolean);
@@ -33,36 +35,34 @@ function sheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
-// ---------- 1. Login ----------
-let avisouLoginAberto = false;
+/** lista publicada junto com o site (muda a cada alteração feita em /acessos, após a republicação) */
+const LISTA = (arquivoAcessos as ArquivoAcessos).acessos || [];
+const doDominio = (e: string, dominios: string[]) => dominios.some(d => e.endsWith('@' + d));
+
+// ---------- 1. Portal ----------
 export function emailPodeEntrar(email?: string | null): boolean {
   if (!email) return false;
-  const e = email.toLowerCase();
-  const dominios = lista(process.env.ALLOWED_EMAIL_DOMAINS);
-  const emails = lista(process.env.ALLOWED_EMAILS);
-  if (!dominios.length && !emails.length) {
-    if (!avisouLoginAberto) {
-      console.warn('[acesso] ALLOWED_EMAIL_DOMAINS/ALLOWED_EMAILS não definidas: qualquer conta Google consegue entrar.');
-      avisouLoginAberto = true;
-    }
-    return true;
-  }
-  return emails.includes(e) || dominios.some(d => e.endsWith('@' + d));
+  const e = email.toLowerCase().trim();
+  if (doDominio(e, [DOMINIO_LOGGIA])) return true;
+  if (lista(process.env.ALLOWED_EMAILS).includes(e) || doDominio(e, lista(process.env.ALLOWED_EMAIL_DOMAINS))) return true;
+  return areaNaLista(e, LISTA) !== null;
 }
 
 // ---------- 2. Gerador ----------
-/**
- * Domínios que usam o gerador. Fica no servidor (código ou variável da Vercel), fora do alcance
- * de quem usa o site. Padrão: loggia.com.br; GERADOR_DOMINIOS="a.com.br,b.com.br" substitui.
- */
 export function emailPodeGerar(email?: string | null): boolean {
-  if (!email || !emailPodeEntrar(email)) return false;
+  if (!email) return false;
+  const e = email.toLowerCase().trim();
   const dominios = lista(process.env.GERADOR_DOMINIOS);
-  const e = email.toLowerCase();
-  return (dominios.length ? dominios : [DOMINIO_GERADOR]).some(d => e.endsWith('@' + d));
+  if (doDominio(e, dominios.length ? dominios : [DOMINIO_LOGGIA])) return true;
+  return areaNaLista(e, LISTA) === 'gerador';
 }
 
-// ---------- 3. Arquivos do Drive ----------
+// ---------- 3. Administradores ----------
+export function emailEhAdmin(email?: string | null): boolean {
+  return !!email && ADMINS.includes(email.toLowerCase().trim());
+}
+
+// ---------- 4. Arquivos do Drive ----------
 // Por fonte (planilha do portal ou planilha de monitoramento): IDs de arquivo que aparecem nela.
 const cacheArquivos = new Map<string, { em: number; ids: Set<string> }>();
 const ID_RE = /[-\w]{25,}/g;
