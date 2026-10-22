@@ -1,4 +1,12 @@
 {
   "_leia": "Lista de acessos ao portal e ao gerador, além dos e-mails @loggia.com.br. Editada pela página /acessos (cada alteração vira um commit e o site é republicado). Pode ser editada à mão também.",
-  "acessos": []
+  "acessos": [
+    {
+      "tipo": "email",
+      "valor": "kelly.valente@sicoob.com.br",
+      "area": "portal",
+      "adicionado_por": "metricas@loggia.com.br",
+      "adicionado_em": "2026-10-22T04:25:45.737Z"
+    }
+  ]
 }
