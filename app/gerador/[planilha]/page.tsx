@@ -5,7 +5,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { emailPodeGerar } from '@/lib/acesso';
 import { obterDadosDoRelatorio, escolherEdicao, numeroEdicao } from '@/lib/google-sheets';
 import { obterMonitoramento } from '@/lib/planilhas';
-import { formatarDataHora, montarRelatorio } from '@/lib/relatorio';
+import { formatarDataHora, montarRelatorio, nomeArquivo } from '@/lib/relatorio';
 import PrintController from '../PrintController';
 import PainelAvisos from '../PainelAvisos';
 import Relatorio from '../Relatorio';
@@ -90,7 +90,7 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
             <div className="h-6 w-px bg-white/20" />
             <span className="font-bold truncate" title={monitoramento.nome}>{monitoramento.nome}</span>
           </div>
-          <PrintController totalAnexos={r.clippings.filter(c => c.printUrl).length} />
+          <PrintController totalAnexos={r.clippings.filter(c => c.printUrl).length} nomeArquivo={nomeArquivo(r, monitoramento.nome)} />
         </div>
         {(eds.length > 1 || atual.descricao) && (
           <div className="flex items-center gap-4 border-t border-white/10 pt-3">

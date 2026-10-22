@@ -239,7 +239,8 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const porRede = zeroRedes();
   doSicoob.forEach(r => { porRede[r.rede!] += vol(r); });
   const acumulado = doSicoob.reduce((a, r) => a + vol(r), 0);
-  const gerais = publicacoes.reduce((a, r) => a + vol(r), 0);
+  // menções gerais ao tema: só as publicações que NÃO envolvem o Sicoob (as que envolvem estão no acumulado)
+  const gerais = publicacoes.filter(r => !r.envolveSicoob).reduce((a, r) => a + vol(r), 0);
   // canais que parecem rede social mas não estão entre as 6 do relatório caem em Imprensa
   const suspeitos = [...new Set(publicacoes.filter(r => r.rede === 'imp' && /tiktok|kwai|threads|telegram|whats|reddit|pinterest|bluesky|rede|social/i.test(r.plataforma)).map(r => r.plataforma.trim()))];
   if (suspeitos.length) avisos.push(`Canais contados como Imprensa no gráfico: ${suspeitos.join(', ')}. O relatório só separa Instagram, X/Twitter, Facebook, LinkedIn e YouTube.`);
@@ -375,4 +376,21 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     leitura: geral.leitura_acionamentos || '',
     clippings, avisos,
   };
+}
+
+/**
+ * Nome do arquivo PDF, no padrão da pasta do portal:
+ * "DD.MM.AAAA_TURNO_Título_Unidade" (ex.: "21.10.2026_TARDE_Apex_Sicoob-ES").
+ * Na 1ª edição o turno é substituído por ABERTURA. Data e turno vêm da última atualização da edição (manhã até 11h59, tarde até 17h59, noite depois);
+ * sem hora, o turno fica de fora. Espaços viram hífen e caracteres proibidos em nome de arquivo saem.
+ */
+export function nomeArquivo(r: Pick<Relatorio, 'ultimaAtualizacao' | 'titulo' | 'unidade' | 'edicao'>, nomeReserva = ''): string {
+  const parte = (s: string) => (s || '').replace(/[\\/:*?"<>|]+/g, ' ').trim().replace(/\s+/g, '-');
+  const d = lerData(r.ultimaAtualizacao);
+  const data = d ? `${String(d.dia).padStart(2, '0')}.${String(d.mes).padStart(2, '0')}.${d.ano}` : '';
+  const hora = d?.temHora ? new Date(d.ts).getHours() : null;
+  // 1ª edição = ABERTURA (como na pasta do portal); as seguintes, o turno da atualização
+  const turno = numeroEdicao(r.edicao) === 1 ? 'ABERTURA'
+    : hora == null ? '' : hora < 12 ? 'MANHÃ' : hora < 18 ? 'TARDE' : 'NOITE';
+  return [data, turno, parte(r.titulo || nomeReserva), parte(r.unidade)].filter(Boolean).join('_') || 'Relatorio-de-monitoramento';
 }
