@@ -23,7 +23,7 @@ async function naFila<T>(tarefa: () => Promise<T>): Promise<T> {
   emAndamento++;
   try { return await tarefa(); } finally { emAndamento--; fila.shift()?.(); }
 }
-interface Props { clip: Clipping; indice: number; total: number; linha: string; protagonismo: string }
+interface Props { clip: Clipping; indice: number; total: number; linha: string; protagonismo: string; planilha: string }
 
 function AreaPrint({ children, cheia, refArea }: { children: React.ReactNode; cheia?: boolean; refArea?: React.Ref<HTMLDivElement> }) {
   return (
@@ -34,7 +34,7 @@ function AreaPrint({ children, cheia, refArea }: { children: React.ReactNode; ch
   );
 }
 
-export default function Anexo({ clip, indice, total, linha, protagonismo }: Props) {
+export default function Anexo({ clip, indice, total, linha, protagonismo, planilha }: Props) {
   const id = extrairId(clip.printUrl);
   const imprensa = clip.rede === 'imp';
   // linha verde só para imprensa (em rede social a rede já está na etiqueta roxa e a autoria na caixa abaixo)
@@ -75,7 +75,7 @@ export default function Anexo({ clip, indice, total, linha, protagonismo }: Prop
         // proporção (altura/largura) das áreas de print; a imagem tem borda de ~1pt
         const prop = (el: HTMLElement) => (el.clientHeight - 4) / el.clientWidth;
         const f = await naFila(async () => {
-          const res = await fetch(`/api/relatorios/file?id=${id}&download=true`);
+          const res = await fetch(`/api/relatorios/file?id=${id}&download=true&planilha=${encodeURIComponent(planilha)}`);
           if (!res.ok) throw new Error(res.status === 404 ? 'arquivo não encontrado ou fora das planilhas do portal' : `o servidor respondeu ${res.status}`);
           const blob = await res.blob();
           if (!blob.type.startsWith('image/') && blob.type !== 'application/pdf') throw new Error(`formato não suportado (${blob.type || 'desconhecido'}); use PDF, PNG ou JPG`);
@@ -93,7 +93,7 @@ export default function Anexo({ clip, indice, total, linha, protagonismo }: Prop
       }
     })();
     return () => { vivo = false; criadas.forEach(x => URL.revokeObjectURL(x.src)); };
-  }, [id, carregar, indice, clip.titulo]);
+  }, [id, carregar, indice, clip.titulo, planilha]);
 
   const partes = fatias?.length || 1;
   const posicao = (k: number) => `Publicação ${indice + 1} de ${total}${partes > 1 ? `  ·  Parte ${k} de ${partes}` : ''}`;

@@ -13,7 +13,9 @@ Next.js 16 na Vercel, com login Google (NextAuth) e dados em planilhas Google li
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Login Google |
 | `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` | Service Account (Sheets e Drive) |
 | `GOOGLE_SHEET_ID` | Planilha do **portal** (aba `Relatorios`) |
-| `SPREADSHEET_ID` | Planilha do **gerador** (abas `Configuracoes_Gerais`, `Registro_Central`, `Acionamentos_Imprensa`, `Acessos_Gerador`) |
+| `PLANILHA_CENTRAL_ID` | Planilha central com a lista de monitoramentos (padrão: *Monitoramentos Diários 2026*) |
+| `PLANILHA_CENTRAL_ABA` | Aba da lista (padrão: `Monitoramentos 2026`) |
+| `GERADOR_DOMINIOS` | Opcional. Domínios que usam o gerador, separados por vírgula. Padrão: `loggia.com.br` |
 | `ALLOWED_EMAIL_DOMAINS` | Domínios que podem entrar no portal, separados por vírgula (ex.: `loggia.com.br,sicoob.com.br`) |
 | `ALLOWED_EMAILS` | E-mails avulsos que podem entrar, separados por vírgula |
 
@@ -23,9 +25,25 @@ Sem `ALLOWED_EMAIL_DOMAINS` e `ALLOWED_EMAILS`, qualquer conta Google consegue e
 
 - **Portal**: só quem passa na lista acima. `/api/relatorios`, `/api/relatorios/file` e `/api/relatorios/thumbnail` exigem login.
 - **Arquivos do Drive**: as rotas só entregam arquivos cujo ID aparece na aba `Relatorios` ou na `COLUNA PRINT` do `Registro_Central`.
-- **Gerador**: e-mails da aba `Acessos_Gerador`. Se a aba estiver vazia, vale o domínio `@loggia.com.br`.
+- **Gerador**: e-mails do domínio `@loggia.com.br` (ou os de `GERADOR_DOMINIOS`).
 
 ## Gerador
+
+### Fluxo
+
+1. **`/gerador`**: lista os monitoramentos da planilha central (colunas `NOME` e `link_da_planilha_do_monitoramento`; o cabeçalho pode estar abaixo de um título mesclado). Busca por nome. Só aparecem as linhas com link de planilha.
+2. **`/gerador/<id da planilha>`**: se a planilha tiver mais de uma edição, mostra a lista para escolher; com uma só, vai direto ao relatório.
+3. **`/gerador/<id da planilha>?edicao=N`**: o relatório. O endereço pode ser salvo ou enviado para outra pessoa revisar a mesma edição.
+
+O site só abre planilhas que estão na lista central. A conta de serviço (`GOOGLE_CLIENT_EMAIL`) precisa de acesso de **leitor** à planilha central, às planilhas de monitoramento e às pastas dos prints. O mais simples é compartilhar a pasta-mãe dos monitoramentos uma vez: tudo que for criado dentro dela herda o acesso.
+
+### Edições
+
+- **`Configuracoes_Gerais`**: uma linha por edição, com `edicao_numero` (ex.: `01`, `02`). Uma coluna cujo nome comece com `descricao` (ex.: `descricao_versao`) aparece na escolha de edição e na barra do gerador, nunca no PDF.
+- **Campos do caso** (`titulo_orgao`, `titulo_crise`, `titulo_o_que_mudou`, `titulo_o_que_significa`, `subtitulo_unidade`, `inicio_monitoramento`, `analise_caso`, `papel_sicoob`, `centro_pauta`, `gatilhos_escalada`, `analise_revisao_data`): se ficarem vazios numa edição, valem os da edição anterior.
+- **Período**: começa na `ultima_atualizacao` da edição anterior; `periodo_inicio` só vale para a primeira edição.
+- **`Registro_Central` e `Acionamentos_Imprensa`**: a coluna `edicao_numero` é opcional. Vazia, a linha pertence à primeira edição cuja `ultima_atualizacao` é igual ou posterior à data dela (coleta; se vazia, a do post). Preenchida, ela vale. Linhas sem data aparecem em todas as edições.
+- **O que entra na edição N**: menções acumuladas, gráfico e linha do tempo somam tudo até N. "Novas menções" e os anexos são só da edição N. Acionamentos: os da edição N e os anteriores ainda em aberto. Na linha do tempo, uma divisória separa as novidades da edição N das edições anteriores.
 
 ```
 lib/google-sheets.ts   leitura das abas
@@ -50,7 +68,7 @@ Recomendados (sem eles o relatório mostra `[__]` ou esconde o item, e o painel 
 | Campo | Uso |
 |---|---|
 | `edicao_numero` | Edição nº |
-| `periodo_inicio` | Início do período desta edição (ex.: `03/10/2026, 09h`). Define o "Período" e o cálculo de **Novas menções** |
+| `periodo_inicio` | Início do período da **primeira** edição (nas seguintes, o período começa na atualização da edição anterior) |
 | `risco_tendencia`, `status_tendencia` | Ex.: `Estável`, `Subindo`, `Caindo` (vira →, ↑, ↓) |
 
 Opcionais: `analise_revisao_data` ("Última revisão: …" na página 3; some quando vazio), `leitura_acionamentos` (bloco "Leitura" abaixo da tabela), `novas_mencoes_detalhe` (substitui o "Última: dd/mm (veículo)" calculado), `titulo_orgao`, `titulo_o_que_mudou`, `titulo_o_que_significa`.
@@ -66,6 +84,7 @@ O arquivo do Drive (PDF, PNG ou JPG) é convertido em imagem no navegador e apar
 As colunas são localizadas pelo **nome do cabeçalho** (linha 1), não pela posição: a ordem pode mudar sem quebrar o relatório. Se um nome for alterado, o painel avisa e a posição padrão é usada.
 
 - **Tipo de Registro**: tipos que começam com `Evento` (`Evento Jurídico`, `Evento Factual`) não são publicações: não entram em nenhum número nem no gráfico, mesmo com Canal/Veiculo preenchido, mas podem aparecer na linha do tempo.
+- **Canal/Veiculo** vazio numa publicação: a rede é deduzida pelo link da matéria (instagram.com, x.com, facebook.com, linkedin.com, youtube.com; outro site = Imprensa), e o painel avisa.
 - **Canal/Veiculo** (demais tipos): nome da rede (`Instagram`, `X/Twitter`, `Facebook`, `LinkedIn`, `YouTube`) ou do veículo de imprensa (`ES Hoje`...). Nome que não seja uma das cinco redes conta como **Imprensa**. Vazio ou `-` = fora dos números (o painel avisa).
 - **Datas** sem ano usam o ano da `ultima_atualizacao`. Faixas como `09 a 13/08` são aceitas na linha do tempo.
 - **Linha do tempo**: o próximo marco vem primeiro; depois do mais recente para o mais antigo. Com `Envolve Sicoob? = NÃO`, o item aparece como contexto, qualquer que seja a tonalidade. Com `SIM` e tonalidade diferente de Negativa/Neutra/Positiva, aparece como `[A CLASSIFICAR]`.

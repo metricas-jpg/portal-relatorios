@@ -1,4 +1,5 @@
 import type { RelatorioDados, RegistroCentral } from './google-sheets';
+import { numeroEdicao } from './edicoes';
 
 /**
  * Transforma os dados crus da planilha no conteúdo do relatório:
@@ -36,15 +37,31 @@ export function redeDoCanal(canal: string): Rede | null {
   return 'imp';
 }
 
+/** rede pelo endereço da publicação (instagram.com, x.com...); outro site = Imprensa */
+export function redeDoLink(link: string): Rede | null {
+  const m = (link || '').trim().toLowerCase().match(/^https?:\/\/([^/?#]+)/);
+  if (!m) return null;
+  const h = m[1].replace(/^www\./, '');
+  if (/(^|\.)instagram\.com$/.test(h)) return 'ins';
+  if (/(^|\.)(x|twitter)\.com$/.test(h)) return 'x';
+  if (/(^|\.)(facebook\.com|fb\.com|fb\.watch)$/.test(h)) return 'fb';
+  if (/(^|\.)linkedin\.com$/.test(h)) return 'li';
+  if (/(^|\.)(youtube\.com|youtu\.be)$/.test(h)) return 'yt';
+  return 'imp';
+}
+
 /**
  * Rede de um registro, considerando o "Tipo de Registro":
  * - "Evento ..." (Evento Jurídico, Evento Factual): não é publicação, não entra nos números,
  *   mesmo que a coluna Canal/Veiculo esteja preenchida (continua podendo ir para a linha do tempo);
- * - demais tipos: a rede vem do Canal/Veiculo.
+ * - demais tipos: a rede vem do Canal/Veiculo; se ele estiver vazio, é deduzida pelo link da matéria.
  */
-export function redeDoRegistro(tipo: string, canal: string): Rede | null {
-  if (normalizar(tipo).startsWith('EVENTO')) return null;
-  return redeDoCanal(canal);
+export function redeDoRegistro(tipo: string, canal: string, link = ''): { rede: Rede | null; deduzida: boolean } {
+  if (normalizar(tipo).startsWith('EVENTO')) return { rede: null, deduzida: false };
+  const pelaColuna = redeDoCanal(canal);
+  if (pelaColuna) return { rede: pelaColuna, deduzida: false };
+  const peloLink = redeDoLink(link);
+  return { rede: peloLink, deduzida: !!peloLink };
 }
 
 // ---------- datas ----------
@@ -92,7 +109,7 @@ const chaveDia = (d: DataLida) => d.ano * 10000 + d.mes * 100 + d.dia;
 
 // ---------- tipos do relatório ----------
 export type Tom = 'neg' | 'neu' | 'pos' | 'acl' | 'ctx' | 'next';
-export interface ItemTimeline { data: string; texto: string; tom: Tom; complemento?: string }
+export interface ItemTimeline { data: string; texto: string; tom: Tom; complemento?: string; novo?: boolean; divisaoAbaixo?: boolean }
 export interface DiaGrafico { rotulo: string; porRede: Record<Rede, number>; total: number }
 export interface Clipping {
   idUnico: string; rede: Rede; veiculo: string; titulo: string; dataPost: string; dataColeta: string;
@@ -108,7 +125,7 @@ export interface Relatorio {
   novas: { qtd: number; detalhe: string };
   gerais: { qtd: number; desde: string };
   acumulado: { qtd: number; desde: string; porRede: Record<Rede, number> };
-  acionamentos: { linhas: Acionamento[]; abertos: number };
+  acionamentos: { linhas: Acionamento[]; novos: number; abertos: number };
   tituloMudou: string; mudou: string; tituloSignifica: string; significa: string; protagonismo: string;
   grafico: DiaGrafico[];
   timeline: ItemTimeline[];
@@ -128,20 +145,38 @@ function tomDaTonalidade(t: string): Tom | null {
   return null;
 }
 
+/** "linhas 2–8, 10, 12–13" */
+function faixas(linhas: number[]) {
+  const ls = [...new Set(linhas)].sort((a, b) => a - b);
+  const out: string[] = [];
+  for (let i = 0; i < ls.length; i++) {
+    let j = i;
+    while (j + 1 < ls.length && ls[j + 1] === ls[j] + 1) j++;
+    out.push(j > i ? `${ls[i]}–${ls[j]}` : `${ls[i]}`);
+    i = j;
+  }
+  return `${ls.length > 1 ? 'linhas' : 'linha'} ${out.join(', ')}`;
+}
+
 export function montarRelatorio(dados: RelatorioDados): Relatorio {
-  const { registros = [], acionamentos = [] } = dados;
+  const { registros = [], acionamentos = [], edicoes = [] } = dados;
   // datas de Configuracoes_Gerais no formato do relatório (a validação da planilha não traz o "h")
   const geral: Record<string, string> = { ...(dados.geral || {}) };
   (['periodo_inicio', 'inicio_monitoramento', 'ultima_atualizacao'] as const).forEach(k => { if (geral[k]) geral[k] = formatarDataHora(geral[k]); });
   const avisos: string[] = [];
   if (geral.erro_api) avisos.push(`Erro de conexão com a planilha: ${geral.erro_api}`);
   avisos.push(...(dados.avisosLeitura || []));
+  // avisos repetidos por linha viram uma linha só: "... (linhas 2–8, 10)"
+  const agrupados = new Map<string, number[]>();
+  const avisar = (aba: string, msg: string, linha: number) => {
+    const k = `${aba}|${msg}`;
+    agrupados.set(k, [...(agrupados.get(k) || []), linha]);
+  };
 
   // Campos que o relatório usa e que não existem (ou estão vazios) na aba Configuracoes_Gerais
   const esperados: [string, string][] = [
     ['titulo_crise', 'título do caso'], ['subtitulo_unidade', 'unidade'], ['edicao_numero', 'número da edição'],
-    ['periodo_inicio', 'início do período desta edição'], ['risco_tendencia', 'tendência do risco'],
-    ['status_tendencia', 'tendência do status'],
+    ['risco_tendencia', 'tendência do risco'], ['status_tendencia', 'tendência do status'],
   ];
   if (!geral.erro_api) {
     const faltando = esperados.filter(([k]) => !(geral[k] || '').trim()).map(([k, d]) => `${k} (${d})`);
@@ -155,16 +190,48 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const inicioData = inicioMon.split(',')[0].trim();
   const desde = refInicio ? ddmm(refInicio) : inicioMon;
 
+  // ---------- edições ----------
+  // cada edição vai até a sua ultima_atualizacao; um registro sem edicao_numero pertence à
+  // primeira edição cuja última atualização é igual ou posterior à data dele
+  const limites = edicoes
+    .map(e => ({ numero: e.numero, fim: lerData(e.ultimaAtualizacao, refUltima) }))
+    .filter(e => e.fim)
+    .map(e => ({ numero: e.numero, fim: chaveDia(e.fim!) }));
+  const N = dados.edicao ?? edicoes[edicoes.length - 1]?.numero ?? 1;
+  const primeira = !edicoes.some(e => e.numero < N);
+  const ultimaEdicao = edicoes[edicoes.length - 1]?.numero ?? N;
+  const edicaoDe = (explicita: string, data: DataLida | null, aba: string, linha: number): number | null => {
+    const n = numeroEdicao(explicita);
+    if (n != null) {
+      if (edicoes.length && !edicoes.some(e => e.numero === n)) avisar(aba, `edicao_numero ${n} não existe em Configuracoes_Gerais`, linha);
+      return n;
+    }
+    if (!data) return null;
+    if (!limites.length) return N;
+    const k = chaveDia(data);
+    const e = limites.find(x => k <= x.fim);
+    if (e) return e.numero;
+    avisar(aba, 'data posterior à última atualização da última edição; conta na última edição até a próxima ser criada', linha);
+    return ultimaEdicao;
+  };
+  // até a edição escolhida (acumulado) e só da edição escolhida (novidades)
+  const ate = (ed: number | null) => ed == null || ed <= N;
+  const daEdicao = (ed: number | null) => primeira ? ate(ed) : ed === N;
+
   // ---------- registros ----------
-  type Reg = RegistroCentral & { rede: Rede | null; dPost: DataLida | null; dRef: DataLida | null; linha: number };
-  const regs: Reg[] = registros.map((r, i) => {
+  type Reg = RegistroCentral & { rede: Rede | null; dPost: DataLida | null; dRef: DataLida | null; ed: number | null };
+  const todos: Reg[] = registros.map((r, i) => {
+    const linha = r.linha || i + 2;
     const dPost = lerData(r.dataPost, refUltima);
     const dColeta = lerData(r.dataColeta, refUltima);
-    const rede = redeDoRegistro(r.tipo, r.plataforma);
+    const { rede, deduzida } = redeDoRegistro(r.tipo, r.plataforma, r.linkMateria);
+    if (deduzida) avisar('Registro_Central', 'sem Canal/Veículo; a rede foi deduzida pelo link da matéria', linha);
     if (!rede && !normalizar(r.tipo).startsWith('EVENTO') && /IMPRENSA|MATERIA|REDE|MENCAO|POST/.test(normalizar(r.tipo)))
-      avisos.push(`Registro_Central, linha ${i + 2}: tipo "${r.tipo}" sem Canal/Veículo; a publicação ficou fora dos números.`);
-    return { ...r, rede, dPost, dRef: dColeta || dPost, linha: i + 2 };
+      avisar('Registro_Central', 'publicação sem Canal/Veículo nem link; ficou fora dos números', linha);
+    const dRef = dColeta || dPost;
+    return { ...r, linha, rede, dPost, dRef, ed: edicaoDe(r.edicao, dRef, 'Registro_Central', linha) };
   });
+  const regs = todos.filter(r => ate(r.ed));
   const publicacoes = regs.filter(r => r.rede);
   const doSicoob = publicacoes.filter(r => r.envolveSicoob);
   const vol = (r: RegistroCentral) => r.volume || 1;
@@ -177,27 +244,15 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const suspeitos = [...new Set(publicacoes.filter(r => r.rede === 'imp' && /tiktok|kwai|threads|telegram|whats|reddit|pinterest|bluesky|rede|social/i.test(r.plataforma)).map(r => r.plataforma.trim()))];
   if (suspeitos.length) avisos.push(`Canais contados como Imprensa no gráfico: ${suspeitos.join(', ')}. O relatório só separa Instagram, X/Twitter, Facebook, LinkedIn e YouTube.`);
 
-  publicacoes.filter(r => !r.dPost).forEach(r =>
-    avisos.push(`Registro_Central, linha ${r.linha}: data do post "${r.dataPost || 'vazia'}" não é uma data (DD/MM); a publicação fica fora do gráfico.`));
+  publicacoes.filter(r => !r.dPost).forEach(r => avisar('Registro_Central', 'data do post vazia ou fora do formato DD/MM; a publicação fica fora do gráfico', r.linha));
 
-  // ---------- novas menções e período ----------
-  const refPeriodo = lerData(geral.periodo_inicio || '', refUltima);
-  if (refPeriodo && refUltima && chaveDia(refPeriodo) > chaveDia(refUltima)) {
-    avisos.push(`Configuracoes_Gerais: periodo_inicio (${geral.periodo_inicio}) é posterior a ultima_atualizacao (${ultima}). Confira as datas: "Novas menções" fica zerado.`);
-  }
-  let novas: number;
-  if (refPeriodo && refUltima) {
-    const de = chaveDia(refPeriodo), ate = chaveDia(refUltima);
-    novas = doSicoob.filter(r => r.dRef && chaveDia(r.dRef) >= de && chaveDia(r.dRef) <= ate).reduce((a, r) => a + vol(r), 0);
-  } else if (inicioMon && inicioMon === ultima) {
-    novas = acumulado;
-  } else {
-    novas = refUltima ? doSicoob.filter(r => r.dRef && chaveDia(r.dRef) >= chaveDia(refUltima)).reduce((a, r) => a + vol(r), 0) : 0;
-    avisos.push('Sem "periodo_inicio" em Configuracoes_Gerais: "Novas menções" conta só o que foi coletado no dia da última atualização, e o período começa no início do monitoramento.');
-  }
+  // ---------- novas menções: as da edição escolhida ----------
+  const novasLista = doSicoob.filter(r => daEdicao(r.ed));
+  const novas = novasLista.reduce((a, r) => a + vol(r), 0);
   const maisRecente = [...doSicoob].filter(r => r.dPost).sort((a, b) => b.dPost!.ts - a.dPost!.ts)[0];
+  const nomeVeiculo = (r: Reg) => r.rede === 'imp' ? (r.plataforma && r.plataforma !== '-' ? r.plataforma : r.autoria || 'Imprensa') : nomeRede(r.rede!);
   const detalheNovas = geral.novas_mencoes_detalhe ||
-    (maisRecente ? `Última: ${ddmm(maisRecente.dPost!)}${maisRecente.rede === 'imp' ? ` (${maisRecente.plataforma})` : ` (${nomeRede(maisRecente.rede!)})`}` : 'nesta edição');
+    (maisRecente ? `Última: ${ddmm(maisRecente.dPost!)} (${nomeVeiculo(maisRecente)})` : 'nesta edição');
 
   // ---------- gráfico ----------
   const dias = new Map<number, DiaGrafico>();
@@ -209,7 +264,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const grafico = [...dias.entries()].sort((a, b) => a[0] - b[0]).map(([, d]) => d);
   if (grafico.length > 21) avisos.push(`O gráfico tem ${grafico.length} dias com menções; para não sobrepor, parte das datas do eixo fica oculta${grafico.length > 46 ? ' e os números acima das barras também' : ''}.`);
 
-  // ---------- linha do tempo ----------
+  // ---------- linha do tempo (acumulada até a edição escolhida) ----------
   const itens = regs.filter(r => r.mostrarTimeline).map((r, ordem) => {
     const texto = r.textoTimeline || r.fato || '';
     let tom: Tom; let complemento: string | undefined;
@@ -219,17 +274,18 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
       complemento = r.dPost ? ddmm(r.dPost) : (r.dataPost || 'Data a confirmar');
     } else if (!r.envolveSicoob) {
       tom = 'ctx';
-      if (t) avisos.push(`Registro_Central, linha ${r.linha}: tonalidade ${normalizar(r.tonalidade)} com "Envolve Sicoob? = NÃO". Na linha do tempo ele aparece como contexto (sem menção ao Sicoob).`);
+      if (t) avisar('Registro_Central', `tonalidade ${normalizar(r.tonalidade)} com "Envolve Sicoob? = NÃO"; na linha do tempo aparece como contexto (sem menção ao Sicoob)`, r.linha);
     } else if (t) {
       tom = t;
     } else {
       tom = 'acl';
-      avisos.push(`Registro_Central, linha ${r.linha}: envolve o Sicoob mas a tonalidade "${r.tonalidade || 'vazia'}" não é NEGATIVA, NEUTRA ou POSITIVA; aparece como [A CLASSIFICAR].`);
+      avisar('Registro_Central', 'envolve o Sicoob, mas a tonalidade não é NEGATIVA, NEUTRA ou POSITIVA; aparece como [A CLASSIFICAR]', r.linha);
     }
-    if (!texto) avisos.push(`Registro_Central, linha ${r.linha}: marcado para a linha do tempo, mas sem texto.`);
+    if (!texto) avisar('Registro_Central', 'marcado para a linha do tempo, mas sem Texto Timeline nem Fato', r.linha);
     // data completa (19/10/2026) aparece como dd/mm, igual ao modelo; faixas e textos ficam como estão
     const data = r.dPost && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(r.dataPost.trim()) ? ddmm(r.dPost) : (r.dataPost || '');
-    return { item: { data, texto, tom, complemento } as ItemTimeline, ts: r.dPost?.ts, proximo: r.proximoMarco, ordem };
+    const novo = r.proximoMarco || daEdicao(r.ed);
+    return { item: { data, texto, tom, complemento, novo } as ItemTimeline, ts: r.dPost?.ts, proximo: r.proximoMarco, ordem };
   });
   // Próximo marco primeiro; depois do mais recente para o mais antigo; itens sem data no fim
   itens.sort((a, b) =>
@@ -237,23 +293,38 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     ((a.ts == null ? 1 : 0) - (b.ts == null ? 1 : 0)) ||
     ((b.ts ?? 0) - (a.ts ?? 0)) || (a.ordem - b.ordem));
   const timeline = itens.map(i => i.item);
+  // divisória entre as novidades desta edição e as edições anteriores
+  if (!primeira) {
+    const iVelho = timeline.findIndex(t => !t.novo);
+    if (iVelho > 0 && timeline.slice(0, iVelho).some(t => t.novo && t.tom !== 'next')) timeline[iVelho - 1].divisaoAbaixo = true;
+  }
 
-  // ---------- acionamentos ----------
+  // ---------- acionamentos: os desta edição + os de edições anteriores ainda em aberto ----------
+  const fechado = (st: string) => /fechad|encerrad|respondid|conclu|finaliz/i.test(normalizar(st).toLowerCase());
   const linhasAc: Acionamento[] = [];
+  let novosAc = 0;
   acionamentos.forEach((a, i) => {
-    const preenchido = Object.values(a).some(v => (v || '').trim());
-    if (!preenchido) return;
+    const linha = a.linha || i + 2;
     const faltam = (['data', 'veiculo', 'demanda'] as const).filter(k => !(a[k] || '').trim());
-    if (faltam.length) { avisos.push(`Acionamentos_Imprensa, linha ${i + 2}: falta ${faltam.join(', ')}; a linha ficou fora do relatório.`); return; }
-    linhasAc.push(a);
+    if (faltam.length) { avisar('Acionamentos_Imprensa', `falta ${faltam.join(', ')}; a linha ficou fora do relatório`, linha); return; }
+    const ed = edicaoDe(a.edicao, lerData(a.data, refUltima), 'Acionamentos_Imprensa', linha);
+    if (!ate(ed)) return;
+    const novo = daEdicao(ed);
+    if (!novo && fechado(a.status)) return;
+    if (novo) novosAc++;
+    // data completa (20/10/2026) vira dd/mm, como na linha do tempo, para caber na coluna
+    const d = lerData(a.data, refUltima);
+    linhasAc.push(d && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(a.data.trim()) ? { ...a, data: ddmm(d) } : a);
   });
-  const abertos = linhasAc.filter(a => !/fechad|encerrad|respondid|conclu|finaliz/i.test(normalizar(a.status).toLowerCase())).length;
+  const abertos = linhasAc.filter(a => !fechado(a.status)).length;
 
-  // ---------- anexos ----------
-  const clippings: Clipping[] = regs.filter(r => r.gerarClipping).map((r, i) => {
-    if (!r.trecho) avisos.push(`Registro_Central, linha ${r.linha}: anexo sem "Trecho sobre o Sicoob".`);
-    if (!r.printUrl) avisos.push(`Registro_Central, linha ${r.linha}: anexo sem link na COLUNA PRINT.`);
-    if (!r.rede) avisos.push(`Registro_Central, linha ${r.linha}: anexo sem Canal/Veículo; foi tratado como Imprensa.`);
+  // ---------- anexos: só as publicações desta edição ----------
+  const clippings: Clipping[] = regs.filter(r => r.gerarClipping && daEdicao(r.ed)).map((r, i) => {
+    if (!r.fato) avisar('Registro_Central', 'anexo sem "Fato / Titulo da Materia" (o título do anexo fica vazio)', r.linha);
+    if (!r.trecho) avisar('Registro_Central', 'anexo sem "Trecho sobre o Sicoob"', r.linha);
+    if (!r.printUrl) avisar('Registro_Central', 'anexo sem link na coluna do print', r.linha);
+    else if (!/[-\w]{25,}/.test(r.printUrl)) avisar('Registro_Central', 'a coluna do print não tem um link do Drive', r.linha);
+    if (!r.rede) avisar('Registro_Central', 'anexo sem Canal/Veículo nem link; foi tratado como Imprensa', r.linha);
     return {
       idUnico: `clip_${i}`, rede: r.rede || 'imp', veiculo: r.plataforma && r.plataforma !== '-' ? r.plataforma : '',
       titulo: r.fato, dataPost: r.dPost ? `${ddmm(r.dPost)}/${r.dPost.ano}` : r.dataPost, dataColeta: r.dataColeta,
@@ -267,6 +338,14 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const dDe = lerData(textoDe, refUltima);
   const periodoAte = refUltima ? `${ddmm(refUltima)}/${refUltima.ano}` : ultima.split(',')[0].trim();
   const periodoDe = dDe ? `${ddmm(dDe)}${refUltima && dDe.ano !== refUltima.ano ? `/${dDe.ano}` : ''}` : textoDe.split(',')[0].trim();
+  if (dDe && refUltima && chaveDia(dDe) > chaveDia(refUltima)) {
+    avisos.push(`Configuracoes_Gerais: o período começa (${textoDe}) depois da ultima_atualizacao (${ultima}). Confira as datas.`);
+  }
+
+  agrupados.forEach((linhas, k) => {
+    const [aba, msg] = k.split('|');
+    avisos.push(`${aba} (${faixas(linhas)}): ${msg}.`);
+  });
 
   // ---------- risco (cores definidas pela equipe) ----------
   const nivelRisco = (geral.nivel_risco || 'BAIXO').toUpperCase();
@@ -283,7 +362,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     novas: { qtd: novas, detalhe: detalheNovas },
     gerais: { qtd: gerais, desde },
     acumulado: { qtd: acumulado, desde, porRede },
-    acionamentos: { linhas: linhasAc, abertos },
+    acionamentos: { linhas: linhasAc, novos: novosAc, abertos },
     tituloMudou: geral.titulo_o_que_mudou || 'O QUE MUDOU', mudou: geral.o_que_mudou || '',
     tituloSignifica: geral.titulo_o_que_significa || 'O QUE SIGNIFICA PARA O SICOOB', significa: geral.o_que_significa || '',
     protagonismo: geral.protagonismo || '',

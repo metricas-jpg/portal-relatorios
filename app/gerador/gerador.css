@@ -137,9 +137,14 @@
   position: absolute; border-radius: 50%; z-index: 1;
   left: calc(81.35pt - var(--d) / 2); top: calc(6.75pt - var(--d) / 2); width: var(--d); height: var(--d);
 }
-.doc .tl > .tl-item:not(:last-child) > .tl-row::after {
-  content: ""; position: absolute; left: 80.6pt; top: 6.75pt; width: 1.5pt; height: 100%; background: var(--linha);
+.doc .tl > .tl-item { position: relative; }
+/* linha vertical: do ponto deste item até o ponto do próximo (passa pela divisória, se houver) */
+.doc .tl > .tl-item:not(:last-child)::after {
+  content: ""; position: absolute; left: 80.6pt; top: 6.75pt; bottom: -6.75pt; width: 1.5pt; background: var(--linha);
 }
+/* divisória entre as novidades da edição escolhida e as edições anteriores */
+.doc .tl-divisao { position: relative; margin: -6pt 0 16pt 100.8pt; border-top: .75pt dashed var(--cinza-claro); }
+.doc .tl-divisao span { position: absolute; right: 0; top: 2.5pt; font: 700 6.5pt/7.8pt var(--font); letter-spacing: .3pt; color: var(--turquesa); text-transform: uppercase; white-space: nowrap; }
 .doc .ponto.g { --d: 11.5pt; }
 .doc .ponto.p { --d: 9.85pt; background: #fff; border: 1.25pt solid var(--cinza-claro); }
 .doc .ponto.next { --d: 12.75pt; background: #fff; border: 1.25pt solid var(--roxo); }

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Só entrega arquivos listados nas planilhas do portal ou do gerador
-    if (!(await arquivoPermitido(fileId))) {
+    if (!(await arquivoPermitido(fileId, searchParams.get('planilha')))) {
       return NextResponse.json({ error: 'Arquivo não encontrado' }, { status: 404 });
     }
 

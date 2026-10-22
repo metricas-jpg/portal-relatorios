@@ -1,4 +1,6 @@
 import { google } from 'googleapis';
+import { lerGrade } from './google-sheets';
+import { obterMonitoramento } from './planilhas';
 
 /**
  * Regras de acesso do portal.
@@ -8,11 +10,11 @@ import { google } from 'googleapis';
  *    ALLOWED_EMAILS (e-mails avulsos). Se nenhuma estiver definida, o login continua
  *    aberto a qualquer conta Google, como antes, e um aviso é registrado no log.
  *
- * 2. Quem pode usar o GERADOR: e-mails da aba "Acessos_Gerador" da planilha do gerador.
- *    Se a aba estiver vazia ou não puder ser lida, vale o domínio @loggia.com.br.
+ * 2. Quem pode usar o GERADOR: e-mails do domínio @loggia.com.br (ou os domínios da
+ *    variável GERADOR_DOMINIOS).
  *
  * 3. Quais ARQUIVOS do Drive o portal entrega: só os que aparecem na aba "Relatorios"
- *    (portal) ou na aba "Registro_Central" (gerador, coluna PRINT).
+ *    (portal) ou no "Registro_Central" da planilha de monitoramento do relatório aberto.
  */
 
 const CACHE_MS = 60_000;
@@ -49,59 +51,58 @@ export function emailPodeEntrar(email?: string | null): boolean {
 }
 
 // ---------- 2. Gerador ----------
-let cacheGerador: { em: number; emails: string[] } | null = null;
-
-async function emailsDoGerador(): Promise<string[]> {
-  if (cacheGerador && Date.now() - cacheGerador.em < CACHE_MS) return cacheGerador.emails;
-  try {
-    const res = await sheetsClient().spreadsheets.values.get({
-      spreadsheetId: process.env.SPREADSHEET_ID,
-      range: 'Acessos_Gerador!A2:A',
-    });
-    const emails = (res.data.values || []).map(l => String(l[0] || '').trim().toLowerCase()).filter(e => e.includes('@'));
-    cacheGerador = { em: Date.now(), emails };
-    return emails;
-  } catch (e) {
-    console.error('[acesso] Não foi possível ler a aba Acessos_Gerador:', (e as Error).message);
-    return [];
-  }
-}
-
-export async function emailPodeGerar(email?: string | null): Promise<boolean> {
+/**
+ * Domínios que usam o gerador. Fica no servidor (código ou variável da Vercel), fora do alcance
+ * de quem usa o site. Padrão: loggia.com.br; GERADOR_DOMINIOS="a.com.br,b.com.br" substitui.
+ */
+export function emailPodeGerar(email?: string | null): boolean {
   if (!email || !emailPodeEntrar(email)) return false;
+  const dominios = lista(process.env.GERADOR_DOMINIOS);
   const e = email.toLowerCase();
-  const autorizados = await emailsDoGerador();
-  if (autorizados.length) return autorizados.includes(e);
-  return e.endsWith('@' + DOMINIO_GERADOR);
+  return (dominios.length ? dominios : [DOMINIO_GERADOR]).some(d => e.endsWith('@' + d));
 }
 
 // ---------- 3. Arquivos do Drive ----------
-let cacheArquivos: { em: number; ids: Set<string> } | null = null;
+// Por fonte (planilha do portal ou planilha de monitoramento): IDs de arquivo que aparecem nela.
+const cacheArquivos = new Map<string, { em: number; ids: Set<string> }>();
 const ID_RE = /[-\w]{25,}/g;
 
-export async function arquivoPermitido(fileId: string): Promise<boolean> {
-  if (!/^[-\w]{25,}$/.test(fileId)) return false;
-  // Recarrega a lista se o cache venceu, ou se o arquivo não está nela e a lista tem mais de 5 s
-  // (assim um print recém-adicionado na planilha já funciona sem esperar o cache vencer).
-  const vencido = !cacheArquivos || Date.now() - cacheArquivos.em > CACHE_MS;
-  const ausente = !!cacheArquivos && !cacheArquivos.ids.has(fileId) && Date.now() - cacheArquivos.em > 5_000;
-  if (vencido || ausente) {
-    const ids = new Set<string>();
-    const sheets = sheetsClient();
-    const fontes: [string | undefined, string][] = [
-      [process.env.GOOGLE_SHEET_ID, 'Relatorios!A2:E'],
-      [process.env.SPREADSHEET_ID, 'Registro_Central!A2:Z'], // a coluna PRINT pode mudar de lugar
-    ];
-    for (const [spreadsheetId, range] of fontes) {
-      if (!spreadsheetId) continue;
-      try {
-        const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-        (res.data.values || []).flat().forEach(c => (String(c).match(ID_RE) || []).forEach(id => ids.add(id)));
-      } catch (e) {
-        console.error(`[acesso] Não foi possível ler ${range}:`, (e as Error).message);
-      }
-    }
-    cacheArquivos = { em: Date.now(), ids };
+async function idsDaFonte(chave: string, ler: () => Promise<string[]>, fileId: string) {
+  const c = cacheArquivos.get(chave);
+  // recarrega se venceu, ou se o arquivo não está na lista e ela tem mais de 5 s
+  // (assim um print recém-adicionado na planilha já funciona sem esperar o cache vencer)
+  if (c && (Date.now() - c.em < CACHE_MS) && (c.ids.has(fileId) || Date.now() - c.em < 5_000)) return c.ids;
+  const ids = new Set<string>();
+  try {
+    (await ler()).forEach(t => (t.match(ID_RE) || []).forEach(id => ids.add(id)));
+  } catch (e) {
+    console.error(`[acesso] Não foi possível ler ${chave}:`, (e as Error).message);
   }
-  return cacheArquivos?.ids.has(fileId) ?? false;
+  cacheArquivos.set(chave, { em: Date.now(), ids });
+  return ids;
+}
+
+/**
+ * O arquivo só é entregue se o ID aparecer na aba Relatorios do portal ou no Registro_Central da
+ * planilha de monitoramento informada (que precisa estar na lista da planilha central).
+ */
+export async function arquivoPermitido(fileId: string, planilhaId?: string | null): Promise<boolean> {
+  if (!/^[-\w]{25,}$/.test(fileId)) return false;
+  const portal = process.env.GOOGLE_SHEET_ID;
+  if (portal) {
+    const ids = await idsDaFonte(`portal:${portal}`, async () => {
+      const res = await sheetsClient().spreadsheets.values.get({ spreadsheetId: portal, range: 'Relatorios!A2:E' });
+      return (res.data.values || []).flat().map(String);
+    }, fileId);
+    if (ids.has(fileId)) return true;
+  }
+  // só planilhas cadastradas na planilha central
+  const planilha = planilhaId && (await obterMonitoramento(planilhaId)) ? planilhaId : null;
+  if (!planilha) return false;
+  const ids = await idsDaFonte(`registro:${planilha}`, async () => {
+    // lê também o link por trás de chips e hiperlinks
+    const grade = await lerGrade(planilha, 'Registro_Central!A2:AZ');
+    return grade.flat().flatMap(c => [c.texto, c.link]);
+  }, fileId);
+  return ids.has(fileId);
 }
