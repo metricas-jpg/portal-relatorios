@@ -6,7 +6,7 @@ import { emailPodeEntrar } from '@/lib/acesso';
 
 export async function GET() {
     const session = await getServerSession(authOptions);
-    if (!emailPodeEntrar(session?.user?.email)) {
+    if (!(await emailPodeEntrar(session?.user?.email))) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
     try {

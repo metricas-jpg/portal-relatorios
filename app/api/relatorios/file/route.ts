@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     // 1. Verifica autenticação no portal
     const session = await getServerSession(authOptions);
-    if (!emailPodeEntrar(session?.user?.email)) {
+    if (!(await emailPodeEntrar(session?.user?.email))) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 

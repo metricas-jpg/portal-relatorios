@@ -16,7 +16,7 @@ export const authOptions: AuthOptions = {
   callbacks: {
     // Só entra quem está na lista de domínios/e-mails permitidos (ver lib/acesso.ts)
     async signIn({ user }) {
-      return emailPodeEntrar(user.email) ? true : '/?erro=AcessoNegado';
+      return (await emailPodeEntrar(user.email)) ? true : '/?erro=AcessoNegado';
     },
     async redirect({ url, baseUrl }) {
       if (url.startsWith('/')) return `${baseUrl}${url}`;
