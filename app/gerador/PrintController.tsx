@@ -6,14 +6,22 @@ import { useEffect, useRef, useState } from 'react';
  * Botão "Gerar Relatório Final": espera os prints dos anexos terminarem de carregar
  * (eles já aparecem na tela como vão sair no PDF) e abre a janela de impressão / salvar como PDF.
  */
-export default function PrintController({ totalAnexos }: { totalAnexos: number }) {
+/**
+ * O título da aba é usado pelo navegador como nome sugerido do PDF ("Salvar como PDF")
+ * e como título dentro do arquivo. Ele é definido ao abrir a página e de novo antes de imprimir.
+ */
+export default function PrintController({ totalAnexos, nomeArquivo }: { totalAnexos: number; nomeArquivo: string }) {
   const [pendentes, setPendentes] = useState(0);
   const [esperando, setEsperando] = useState(false);
   const esperandoRef = useRef(false);
 
-  const imprimir = () => { esperandoRef.current = false; setEsperando(false); setTimeout(() => window.print(), 300); };
+  const nomeRef = useRef(nomeArquivo);
+  useEffect(() => { nomeRef.current = nomeArquivo; document.title = nomeArquivo; }, [nomeArquivo]);
 
   useEffect(() => {
+    const abrir = () => { document.title = nomeRef.current; window.print(); };
+    const imprimir = () => { esperandoRef.current = false; setEsperando(false); setTimeout(abrir, 300); };
+
     const atualizar = () => {
       const n = window.__anexosPendentes || 0;
       setPendentes(n);
@@ -28,7 +36,7 @@ export default function PrintController({ totalAnexos }: { totalAnexos: number }
     // pede aos anexos que ainda não carregaram para carregar agora (eles entram na contagem na hora)
     window.dispatchEvent(new CustomEvent('gerar-relatorio'));
     if ((window.__anexosPendentes || 0) > 0) { esperandoRef.current = true; setEsperando(true); }
-    else window.print();
+    else { document.title = nomeRef.current; window.print(); }
   };
 
   return (
