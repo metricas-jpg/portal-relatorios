@@ -381,14 +381,16 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
 /**
  * Nome do arquivo PDF, no padrão da pasta do portal:
  * "DD.MM.AAAA_TURNO_Título_Unidade" (ex.: "21.10.2026_TARDE_Apex_Sicoob-ES").
- * Data e turno vêm da última atualização da edição (manhã até 11h59, tarde até 17h59, noite depois);
+ * Na 1ª edição o turno é substituído por ABERTURA. Data e turno vêm da última atualização da edição (manhã até 11h59, tarde até 17h59, noite depois);
  * sem hora, o turno fica de fora. Espaços viram hífen e caracteres proibidos em nome de arquivo saem.
  */
-export function nomeArquivo(r: Pick<Relatorio, 'ultimaAtualizacao' | 'titulo' | 'unidade'>, nomeReserva = ''): string {
+export function nomeArquivo(r: Pick<Relatorio, 'ultimaAtualizacao' | 'titulo' | 'unidade' | 'edicao'>, nomeReserva = ''): string {
   const parte = (s: string) => (s || '').replace(/[\\/:*?"<>|]+/g, ' ').trim().replace(/\s+/g, '-');
   const d = lerData(r.ultimaAtualizacao);
   const data = d ? `${String(d.dia).padStart(2, '0')}.${String(d.mes).padStart(2, '0')}.${d.ano}` : '';
   const hora = d?.temHora ? new Date(d.ts).getHours() : null;
-  const turno = hora == null ? '' : hora < 12 ? 'MANHÃ' : hora < 18 ? 'TARDE' : 'NOITE';
+  // 1ª edição = ABERTURA (como na pasta do portal); as seguintes, o turno da atualização
+  const turno = numeroEdicao(r.edicao) === 1 ? 'ABERTURA'
+    : hora == null ? '' : hora < 12 ? 'MANHÃ' : hora < 18 ? 'TARDE' : 'NOITE';
   return [data, turno, parte(r.titulo || nomeReserva), parte(r.unidade)].filter(Boolean).join('_') || 'Relatorio-de-monitoramento';
 }

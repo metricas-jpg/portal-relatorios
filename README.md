@@ -77,7 +77,7 @@ Em qualquer texto, `**trecho**` sai em negrito.
 
 **Menções gerais ao tema** conta só as publicações com `Envolve Sicoob? = NÃO` (as que envolvem o Sicoob estão em "Menções ao Sicoob acumuladas").
 
-**Nome do PDF.** O título da aba do gerador vira o nome sugerido ao "Salvar como PDF" e o título dentro do arquivo, no padrão da pasta do portal: `DD.MM.AAAA_TURNO_Título_Unidade` (ex.: `21.10.2026_TARDE_Apex_Sicoob-ES`). Data e turno vêm da `ultima_atualizacao` da edição (manhã até 11h59, tarde até 17h59, noite depois; sem hora, o turno fica de fora); o título é o `titulo_crise` (ou o NOME da planilha central) e a unidade é o `subtitulo_unidade`.
+**Nome do PDF.** O título da aba do gerador vira o nome sugerido ao "Salvar como PDF" e o título dentro do arquivo, no padrão da pasta do portal: `DD.MM.AAAA_TURNO_Título_Unidade` (ex.: `21.10.2026_TARDE_Apex_Sicoob-ES`). Data e turno vêm da `ultima_atualizacao` da edição (manhã até 11h59, tarde até 17h59, noite depois; sem hora, o turno fica de fora). Na 1ª edição, o turno é substituído por `ABERTURA`; o título é o `titulo_crise` (ou o NOME da planilha central) e a unidade é o `subtitulo_unidade`.
 
 ### Prints dos anexos (COLUNA PRINT)
 
