@@ -100,7 +100,7 @@ As colunas são localizadas pelo **nome do cabeçalho** (linha 1), não pela pos
 
 - **Tipo de Registro**: tipos que começam com `Evento` (`Evento Jurídico`, `Evento Factual`) não são publicações: não entram em nenhum número nem no gráfico, mesmo com Canal/Veiculo preenchido, mas podem aparecer na linha do tempo.
 - **Canal/Veiculo** vazio numa publicação: a rede é deduzida pelo link da matéria (instagram.com, x.com, facebook.com, linkedin.com, youtube.com; outro site = Imprensa), e o painel avisa.
-- **Canal/Veiculo** (demais tipos): nome da rede (`Instagram`, `X/Twitter`, `Facebook`, `LinkedIn`, `YouTube`) ou do veículo de imprensa (`ES Hoje`...). Nome que não seja uma das cinco redes conta como **Imprensa**. Vazio ou `-` = fora dos números (o painel avisa).
+- **Canal/Veiculo** (demais tipos): nome da rede (`Instagram`, `X/Twitter`, `Facebook`, `LinkedIn`, `YouTube`, `TikTok`) ou do veículo de imprensa (`ES Hoje`...). Nome que não seja uma das seis redes conta como **Imprensa**. Vazio ou `-` = fora dos números (o painel avisa).
 - **Datas** sem ano usam o ano da `ultima_atualizacao`. Faixas como `09 a 13/08` são aceitas na linha do tempo.
 - **Linha do tempo**: o próximo marco vem primeiro; depois do mais recente para o mais antigo. Com `Envolve Sicoob? = NÃO`, o item aparece como contexto, qualquer que seja a tonalidade. Com `SIM` e tonalidade diferente de Negativa/Neutra/Positiva, aparece como `[A CLASSIFICAR]`.
 
