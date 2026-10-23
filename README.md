@@ -52,7 +52,7 @@ O site só abre planilhas que estão na lista central. A conta de serviço (`GOO
 
 - **`Configuracoes_Gerais`**: uma linha por edição, com `edicao_numero` (ex.: `01`, `02`). Uma coluna cujo nome comece com `descricao` (ex.: `descricao_versao`) aparece na escolha de edição e na barra do gerador, nunca no PDF.
 - **Campos do caso** (`titulo_orgao`, `titulo_crise`, `titulo_o_que_mudou`, `titulo_o_que_significa`, `subtitulo_unidade`, `inicio_monitoramento`, `analise_caso`, `papel_sicoob`, `centro_pauta`, `gatilhos_escalada`, `analise_revisao_data`): se ficarem vazios numa edição, valem os da edição anterior.
-- **Período**: começa na `ultima_atualizacao` da edição anterior; `periodo_inicio` só vale para a primeira edição.
+- **Período**: começa na `ultima_atualizacao` da edição anterior; `periodo_inicio` só vale para a primeira edição. Na linha de datas, o período e a última atualização mostram a hora (quando a planilha traz); o início do monitoramento mostra só a data.
 - **`Registro_Central` e `Acionamentos_Imprensa`**: a coluna `edicao_numero` é opcional. Vazia, a linha pertence à primeira edição cuja `ultima_atualizacao` é igual ou posterior à data dela (coleta; se vazia, a do post). Preenchida, ela vale. Linhas sem data aparecem em todas as edições.
 - **O que entra na edição N**: menções acumuladas, gráfico, linha do tempo e anexos somam tudo até N. "Novas menções" é só da edição N. O gráfico usa a **Data Coleta** no eixo (sem ela, a data do post). Acionamentos: os da edição N e os anteriores ainda em aberto. Na linha do tempo, uma divisória separa as novidades da edição N das edições anteriores.
 

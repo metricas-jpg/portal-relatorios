@@ -77,7 +77,7 @@ function Pagina1({ r }: { r: Dados }) {
       <span className="t z24 b c-branco lim1" data-limite="Título do caso (titulo_crise)" style={st(mv(117.2, H2), 32.4, { width: '530.6pt' })}>{vazio(r.titulo, '[Título do caso]')}</span>
       <span className="t z15 b c-lima lim1" data-limite="Unidade (subtitulo_unidade)" style={st(mv(147.8, H2), 32.4, { width: '530.6pt' })}>{vazio(r.unidade, '[Unidade]')}</span>
       <span className="t z85 c-branco lim1" data-limite="Linha de datas do cabeçalho" style={st(mv(182.7, H3), 32.4, { width: '530.6pt' })}>
-        {`Início do monitoramento: ${vazio(r.inicio)}   ·   Edição nº ${vazio(r.edicao)}   ·   Período: ${vazio(r.periodoDe)} a ${vazio(r.periodoAte)}   ·   Última atualização: ${vazio(r.ultimaAtualizacao)}`}
+        {`Início do monitoramento: ${vazio(r.inicio)}  ·  Edição nº ${vazio(r.edicao)}  ·  Período: ${vazio(r.periodoDe)} a ${vazio(r.periodoAte)}  ·  Última atualização: ${vazio(r.ultimaAtualizacao)}`}
       </span>
 
       {/* risco e status */}
