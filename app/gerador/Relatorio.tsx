@@ -54,12 +54,11 @@ function Grafico({ r }: { r: Dados }) {
 
 function Pagina1({ r }: { r: Dados }) {
   const pr = r.acumulado.porRede;
-  const legenda = [
-    ['Imprensa', pr.imp, 332.5, 367.5], ['Instagram', pr.ins, 332.5, 383.3], ['X/Twitter', pr.x, 332.5, 399.1],
-    ['Facebook', pr.fb, 394.4, 367.5], ['LinkedIn', pr.li, 394.4, 383.3], ['YouTube', pr.yt, 394.4, 399.1],
-  ] as const;
-  const quadrados = [[321.7, 361, 'roxo'], [321.7, 376.9, 'turquesa'], [321.7, 392.7, 'petroleo'], [383.5, 361, 'verde'], [383.5, 376.9, 'lima'], [383.5, 392.7, 'laranja']] as const;
-  const legGrafico = [[32.4, 43.9], [102.2, 113.8], [176.8, 188.3], [251.3, 262.8], [321.1, 332.6], [391, 402.5]] as const;
+  // legenda do card "acumuladas": 2 colunas × 4 linhas (Imprensa, Instagram, X, Facebook | LinkedIn, YouTube, TikTok)
+  const legenda = REDES.map((rede, i) => ({
+    ...rede, n: pr[rede.chave], l: i < 4 ? 321.7 : 383.5, b: 363.1 + 12 * (i % 4),
+  }));
+  const legGrafico = [[32.4, 43.9], [102.2, 113.8], [176.8, 188.3], [251.3, 262.8], [321.1, 332.6], [391, 402.5], [460.8, 472.3]] as const;
   const nAc = r.acionamentos.novos;
   // deslocamentos da página elástica (ver gerador.css e AjustePagina1)
   const H1 = '--dh1', H2 = '--dh2', H3 = '--dh3', C1 = '--dc1', C2 = '--dc2', K1 = '--dk1', K2 = '--dk2', T = '--dt', SEP = '--dsep', G = '--dg';
@@ -118,8 +117,12 @@ function Pagina1({ r }: { r: Dados }) {
       <span className="t z7 b c-cinza" style={st(mv(343.2, K1), 264.1)}>MENÇÕES AO SICOOB ACUMULADAS</span>
       <span className="t z26 b c-pet" style={st(mv(387.7, K2), 264.1)}>{r.acumulado.qtd}</span>
       <span className="t z7 c-cinza" style={st(mv(401.5, K2), 264.1)}>desde {r.acumulado.desde}</span>
-      {quadrados.map(([l, t, c]) => <div key={c} className="sq" style={{ left: `${l}pt`, top: mv(t, K2), background: `var(--${c})` }} />)}
-      {legenda.map(([nome, n, l, b]) => <span key={nome} className="t z7 c-texto" style={st(mv(b, K2), l)}>{nome}  <b>{n}</b></span>)}
+      {legenda.map(x => (
+        <Fragment key={x.chave}>
+          <div className="sq" style={{ left: `${x.l}pt`, top: mv(x.b - 6.5, K2), background: x.cor }} />
+          <span className="t z7 c-texto" style={st(mv(x.b, K2), x.l + 10.8)}>{x.nome}  <b>{x.n}</b></span>
+        </Fragment>
+      ))}
 
       {card(463.4, 327.6, 99.6, 86.4, K1, '--rck')}
       <span className="t z7 b c-cinza" style={st(mv(343.2, K1), 474.2)}>{'ACIONAMENTOS\nDE IMPRENSA'}</span>

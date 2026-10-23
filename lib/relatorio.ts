@@ -15,6 +15,7 @@ export const REDES = [
   { chave: 'fb', nome: 'Facebook', cor: 'var(--verde)' },
   { chave: 'li', nome: 'LinkedIn', cor: 'var(--lima)' },
   { chave: 'yt', nome: 'YouTube', cor: 'var(--laranja)' },
+  { chave: 'tt', nome: 'TikTok', cor: 'var(--cinza-claro)' },
 ] as const;
 export type Rede = (typeof REDES)[number]['chave'];
 export const nomeRede = (r: Rede) => REDES.find(x => x.chave === r)!.nome;
@@ -34,6 +35,7 @@ export function redeDoCanal(canal: string): Rede | null {
   if (n.includes('facebook')) return 'fb';
   if (n.includes('linkedin')) return 'li';
   if (n.includes('youtube')) return 'yt';
+  if (n.includes('tiktok') || n.includes('tik tok')) return 'tt';
   return 'imp';
 }
 
@@ -47,6 +49,7 @@ export function redeDoLink(link: string): Rede | null {
   if (/(^|\.)(facebook\.com|fb\.com|fb\.watch)$/.test(h)) return 'fb';
   if (/(^|\.)linkedin\.com$/.test(h)) return 'li';
   if (/(^|\.)(youtube\.com|youtu\.be)$/.test(h)) return 'yt';
+  if (/(^|\.)tiktok\.com$/.test(h)) return 'tt';
   return 'imp';
 }
 
@@ -243,9 +246,9 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const acumulado = doSicoob.reduce((a, r) => a + vol(r), 0);
   // menções gerais ao tema: só as publicações que NÃO envolvem o Sicoob (as que envolvem estão no acumulado)
   const gerais = publicacoes.filter(r => !r.envolveSicoob).reduce((a, r) => a + vol(r), 0);
-  // canais que parecem rede social mas não estão entre as 6 do relatório caem em Imprensa
-  const suspeitos = [...new Set(publicacoes.filter(r => r.rede === 'imp' && /tiktok|kwai|threads|telegram|whats|reddit|pinterest|bluesky|rede|social/i.test(r.plataforma)).map(r => r.plataforma.trim()))];
-  if (suspeitos.length) avisos.push(`Canais contados como Imprensa no gráfico: ${suspeitos.join(', ')}. O relatório só separa Instagram, X/Twitter, Facebook, LinkedIn e YouTube.`);
+  // canais que parecem rede social mas não estão entre as redes do relatório caem em Imprensa
+  const suspeitos = [...new Set(publicacoes.filter(r => r.rede === 'imp' && /kwai|threads|telegram|whats|reddit|pinterest|bluesky|rede|social/i.test(r.plataforma)).map(r => r.plataforma.trim()))];
+  if (suspeitos.length) avisos.push(`Canais contados como Imprensa no gráfico: ${suspeitos.join(', ')}. O relatório só separa ${REDES.filter(x => x.chave !== 'imp').map(x => x.nome).join(', ').replace(/, ([^,]*)$/, ' e $1')}.`);
 
   publicacoes.filter(r => !r.dRef).forEach(r => avisar('Registro_Central', 'sem Data Coleta nem Data do post válidas (DD/MM); a publicação fica fora do gráfico', r.linha));
 
