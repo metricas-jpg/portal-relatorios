@@ -54,7 +54,7 @@ O site só abre planilhas que estão na lista central. A conta de serviço (`GOO
 - **Campos do caso** (`titulo_orgao`, `titulo_crise`, `titulo_o_que_mudou`, `titulo_o_que_significa`, `subtitulo_unidade`, `inicio_monitoramento`, `analise_caso`, `papel_sicoob`, `centro_pauta`, `gatilhos_escalada`, `analise_revisao_data`): se ficarem vazios numa edição, valem os da edição anterior.
 - **Período**: começa na `ultima_atualizacao` da edição anterior; `periodo_inicio` só vale para a primeira edição.
 - **`Registro_Central` e `Acionamentos_Imprensa`**: a coluna `edicao_numero` é opcional. Vazia, a linha pertence à primeira edição cuja `ultima_atualizacao` é igual ou posterior à data dela (coleta; se vazia, a do post). Preenchida, ela vale. Linhas sem data aparecem em todas as edições.
-- **O que entra na edição N**: menções acumuladas, gráfico e linha do tempo somam tudo até N. "Novas menções" e os anexos são só da edição N. Acionamentos: os da edição N e os anteriores ainda em aberto. Na linha do tempo, uma divisória separa as novidades da edição N das edições anteriores.
+- **O que entra na edição N**: menções acumuladas, gráfico, linha do tempo e anexos somam tudo até N. "Novas menções" é só da edição N. O gráfico usa a **Data Coleta** no eixo (sem ela, a data do post). Acionamentos: os da edição N e os anteriores ainda em aberto. Na linha do tempo, uma divisória separa as novidades da edição N das edições anteriores.
 
 ```
 lib/google-sheets.ts   leitura das abas

@@ -55,7 +55,7 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
     return (
       <TelaSelecao titulo={monitoramento.nome} voltar={voltar}>
         {pedido && <AvisoErro>A edição {String(pedido)} não existe nesta planilha. Escolha uma das edições abaixo.</AvisoErro>}
-        <p className="text-sm text-slate-600 mb-4">Escolha a edição do relatório. A linha do tempo, o gráfico e as menções acumuladas incluem tudo até a edição escolhida.</p>
+        <p className="text-sm text-slate-600 mb-4">Escolha a edição do relatório. A linha do tempo, o gráfico, as menções acumuladas e os anexos incluem tudo até a edição escolhida.</p>
         <ul className="bg-white rounded-2xl shadow-sm border border-slate-200/90 divide-y divide-slate-100 overflow-hidden">
           {[...eds].reverse().map((e, i) => (
             <li key={e.numero}>

@@ -245,7 +245,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const suspeitos = [...new Set(publicacoes.filter(r => r.rede === 'imp' && /tiktok|kwai|threads|telegram|whats|reddit|pinterest|bluesky|rede|social/i.test(r.plataforma)).map(r => r.plataforma.trim()))];
   if (suspeitos.length) avisos.push(`Canais contados como Imprensa no gráfico: ${suspeitos.join(', ')}. O relatório só separa Instagram, X/Twitter, Facebook, LinkedIn e YouTube.`);
 
-  publicacoes.filter(r => !r.dPost).forEach(r => avisar('Registro_Central', 'data do post vazia ou fora do formato DD/MM; a publicação fica fora do gráfico', r.linha));
+  publicacoes.filter(r => !r.dRef).forEach(r => avisar('Registro_Central', 'sem Data Coleta nem Data do post válidas (DD/MM); a publicação fica fora do gráfico', r.linha));
 
   // ---------- novas menções: as da edição escolhida ----------
   const novasLista = doSicoob.filter(r => daEdicao(r.ed));
@@ -255,11 +255,11 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const detalheNovas = geral.novas_mencoes_detalhe ||
     (maisRecente ? `Última: ${ddmm(maisRecente.dPost!)} (${nomeVeiculo(maisRecente)})` : 'nesta edição');
 
-  // ---------- gráfico ----------
+  // ---------- gráfico: por dia de COLETA (sem Data Coleta, usa a data do post) ----------
   const dias = new Map<number, DiaGrafico>();
-  doSicoob.filter(r => r.dPost).forEach(r => {
-    const k = chaveDia(r.dPost!);
-    if (!dias.has(k)) dias.set(k, { rotulo: ddmm(r.dPost!), porRede: zeroRedes(), total: 0 });
+  doSicoob.filter(r => r.dRef).forEach(r => {
+    const k = chaveDia(r.dRef!);
+    if (!dias.has(k)) dias.set(k, { rotulo: ddmm(r.dRef!), porRede: zeroRedes(), total: 0 });
     const d = dias.get(k)!; d.porRede[r.rede!] += vol(r); d.total += vol(r);
   });
   const grafico = [...dias.entries()].sort((a, b) => a[0] - b[0]).map(([, d]) => d);
@@ -319,8 +319,8 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   });
   const abertos = linhasAc.filter(a => !fechado(a.status)).length;
 
-  // ---------- anexos: só as publicações desta edição ----------
-  const clippings: Clipping[] = regs.filter(r => r.gerarClipping && daEdicao(r.ed)).map((r, i) => {
+  // ---------- anexos: todos os marcados, desta edição e das anteriores ----------
+  const clippings: Clipping[] = regs.filter(r => r.gerarClipping).map((r, i) => {
     if (!r.fato) avisar('Registro_Central', 'anexo sem "Fato / Titulo da Materia" (o título do anexo fica vazio)', r.linha);
     if (!r.trecho) avisar('Registro_Central', 'anexo sem "Trecho sobre o Sicoob"', r.linha);
     if (!r.printUrl) avisar('Registro_Central', 'anexo sem link na coluna do print', r.linha);
