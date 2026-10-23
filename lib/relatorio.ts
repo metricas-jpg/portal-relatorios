@@ -119,12 +119,17 @@ export interface Clipping {
   link: string; autoria: string; tonalidade: string; tom: Tom; trecho: string; printUrl: string;
   /** publicação da edição escolhida (só marcada a partir da 2ª edição) */
   nova: boolean;
+  /** posicao_citacao da planilha (vazio = o site procura "Sicoob" no print) */
+  posicaoCitacao: string;
 }
 export interface Acionamento { data: string; veiculo: string; jornalista: string; demanda: string; prazo: string; resposta: string; status: string }
 
 export interface Relatorio {
   orgao: string; titulo: string; unidade: string;
-  inicio: string; edicao: string; periodoDe: string; periodoAte: string; ultimaAtualizacao: string;
+  /** início = Data Coleta mais antiga (de todas as edições); atualizadoEm = Data Coleta mais recente até a edição */
+  inicio: string; edicao: string; atualizadoEm: string;
+  /** ultima_atualizacao de Configuracoes_Gerais: data da edição (cabeçalho interno e nome do PDF) */
+  ultimaAtualizacao: string;
   risco: { nivel: string; cor: string; tendencia: string; texto: string };
   status: { nivel: string; tendencia: string; texto: string };
   novas: { qtd: number; detalhe: string };
@@ -167,7 +172,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const { registros = [], acionamentos = [], edicoes = [] } = dados;
   // datas de Configuracoes_Gerais no formato do relatório (a validação da planilha não traz o "h")
   const geral: Record<string, string> = { ...(dados.geral || {}) };
-  (['periodo_inicio', 'inicio_monitoramento', 'ultima_atualizacao'] as const).forEach(k => { if (geral[k]) geral[k] = formatarDataHora(geral[k]); });
+  (['inicio_monitoramento', 'ultima_atualizacao'] as const).forEach(k => { if (geral[k]) geral[k] = formatarDataHora(geral[k]); });
   const avisos: string[] = [];
   if (geral.erro_api) avisos.push(`Erro de conexão com a planilha: ${geral.erro_api}`);
   avisos.push(...(dados.avisosLeitura || []));
@@ -191,9 +196,6 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const ultima = geral.ultima_atualizacao || '';
   const refUltima = lerData(ultima);
   const inicioMon = geral.inicio_monitoramento || '';
-  const refInicio = lerData(inicioMon, refUltima);
-  const inicioData = inicioMon.split(',')[0].trim();
-  const desde = refInicio ? ddmm(refInicio) : inicioMon;
 
   // ---------- edições ----------
   // cada edição vai até a sua ultima_atualizacao; um registro sem edicao_numero pertence à
@@ -224,7 +226,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const daEdicao = (ed: number | null) => primeira ? ate(ed) : ed === N;
 
   // ---------- registros ----------
-  type Reg = RegistroCentral & { rede: Rede | null; dPost: DataLida | null; dRef: DataLida | null; ed: number | null };
+  type Reg = RegistroCentral & { rede: Rede | null; dPost: DataLida | null; dColeta: DataLida | null; dRef: DataLida | null; ed: number | null };
   const todos: Reg[] = registros.map((r, i) => {
     const linha = r.linha || i + 2;
     const dPost = lerData(r.dataPost, refUltima);
@@ -234,9 +236,28 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     if (!rede && !normalizar(r.tipo).startsWith('EVENTO') && /IMPRENSA|MATERIA|REDE|MENCAO|POST/.test(normalizar(r.tipo)))
       avisar('Registro_Central', 'publicação sem Canal/Veículo nem link; ficou fora dos números', linha);
     const dRef = dColeta || dPost;
-    return { ...r, linha, rede, dPost, dRef, ed: edicaoDe(r.edicao, dRef, 'Registro_Central', linha) };
+    return { ...r, linha, rede, dPost, dColeta, dRef, ed: edicaoDe(r.edicao, dRef, 'Registro_Central', linha) };
   });
   const regs = todos.filter(r => ate(r.ed));
+
+  // ---------- início e última atualização da linha de datas: pelas Datas Coleta ----------
+  // início = coleta mais antiga de todo o monitoramento (qualquer edição);
+  // última atualização = coleta mais recente até a edição escolhida
+  const dataCompleta = (d: DataLida) => `${ddmm(d)}/${d.ano}`;
+  const horaDe = (t: string) => { const h = formatarDataHora(t).match(/,\s*(\d{2}h\d*)$/); return h ? `, ${h[1]}` : ''; };
+  const maisAntiga = todos.filter(r => r.dColeta).sort((a, b) => a.dColeta!.ts - b.dColeta!.ts)[0];
+  const coletaRecente = regs.filter(r => r.dColeta).sort((a, b) => b.dColeta!.ts - a.dColeta!.ts)[0];
+  const refInicio = maisAntiga?.dColeta || lerData(inicioMon, refUltima);
+  const inicio = refInicio ? dataCompleta(refInicio) : inicioMon.split(',')[0].trim();
+  const desde = refInicio ? ddmm(refInicio) : inicioMon;
+  let atualizadoEm = ultima;
+  if (coletaRecente) {
+    const d = coletaRecente.dColeta!;
+    // a hora vem da própria Data Coleta; sem ela, da ultima_atualizacao, se for o mesmo dia
+    const hora = horaDe(coletaRecente.dataColeta) || (refUltima && chaveDia(refUltima) === chaveDia(d) ? horaDe(ultima) : '');
+    atualizadoEm = dataCompleta(d) + hora;
+  }
+  if (!maisAntiga) avisos.push('Registro_Central: nenhuma Data Coleta válida (DD/MM/AAAA); o início e a última atualização vieram de Configuracoes_Gerais.');
   const publicacoes = regs.filter(r => r.rede);
   const doSicoob = publicacoes.filter(r => r.envolveSicoob);
   const vol = (r: RegistroCentral) => r.volume || 1;
@@ -335,22 +356,9 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
       idUnico: `clip_${i}`, rede: r.rede || 'imp', veiculo: r.plataforma && r.plataforma !== '-' ? r.plataforma : '',
       titulo: r.fato, dataPost: r.dPost ? `${ddmm(r.dPost)}/${r.dPost.ano}` : r.dataPost, dataColeta: r.dataColeta,
       link: r.linkMateria, autoria: r.autoria, tonalidade: r.tonalidade, tom: tomDaTonalidade(r.tonalidade) || 'acl',
-      trecho: r.trecho, printUrl: r.printUrl, nova: !primeira && daEdicao(r.ed),
+      trecho: r.trecho, printUrl: r.printUrl, nova: !primeira && daEdicao(r.ed), posicaoCitacao: r.posicaoCitacao || '',
     };
   });
-
-  // ---------- período, com a hora quando a planilha traz: "18/10, 09h a 20/10, 14h" ----------
-  // o ano só aparece se o período atravessar a virada do ano (ele já está no início e na última
-  // atualização, e sem ele a linha de datas cabe mesmo com horas e minutos nas duas pontas)
-  const textoDe = geral.periodo_inicio || inicioMon;
-  const dDe = lerData(textoDe, refUltima);
-  const outroAno = !!(dDe && refUltima && dDe.ano !== refUltima.ano);
-  const hora = (t: string) => { const h = t.match(/,\s*(\d{2}h\d*)$/); return h ? `, ${h[1]}` : ''; };
-  const periodoAte = refUltima ? `${ddmm(refUltima)}${outroAno ? `/${refUltima.ano}` : ''}${hora(ultima)}` : ultima;
-  const periodoDe = dDe ? `${ddmm(dDe)}${outroAno ? `/${dDe.ano}` : ''}${hora(textoDe)}` : textoDe;
-  if (dDe && refUltima && chaveDia(dDe) > chaveDia(refUltima)) {
-    avisos.push(`Configuracoes_Gerais: o período começa (${textoDe}) depois da ultima_atualizacao (${ultima}). Confira as datas.`);
-  }
 
   agrupados.forEach((linhas, k) => {
     const [aba, msg] = k.split('|');
@@ -365,8 +373,8 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   return {
     orgao: geral.titulo_orgao || 'Superintendência de Negócios Digitais, Marketing e Experiência do Cooperado',
     titulo: geral.titulo_crise || '', unidade: geral.subtitulo_unidade || '',
-    inicio: inicioData, edicao: geral.edicao_numero || '',
-    periodoDe, periodoAte, ultimaAtualizacao: ultima,
+    inicio, edicao: geral.edicao_numero || '',
+    atualizadoEm, ultimaAtualizacao: ultima,
     risco: { nivel: nivelRisco, cor: corRisco, tendencia: geral.risco_tendencia || '', texto: geral.risco_texto || '' },
     status: { nivel: geral.status_crise || '', tendencia: geral.status_tendencia || '', texto: geral.status_texto || '' },
     novas: { qtd: novas, detalhe: detalheNovas },

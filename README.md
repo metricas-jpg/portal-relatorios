@@ -52,7 +52,7 @@ O site só abre planilhas que estão na lista central. A conta de serviço (`GOO
 
 - **`Configuracoes_Gerais`**: uma linha por edição, com `edicao_numero` (ex.: `01`, `02`). Uma coluna cujo nome comece com `descricao` (ex.: `descricao_versao`) aparece na escolha de edição e na barra do gerador, nunca no PDF.
 - **Campos do caso** (`titulo_orgao`, `titulo_crise`, `titulo_o_que_mudou`, `titulo_o_que_significa`, `subtitulo_unidade`, `inicio_monitoramento`, `analise_caso`, `papel_sicoob`, `centro_pauta`, `gatilhos_escalada`, `analise_revisao_data`): se ficarem vazios numa edição, valem os da edição anterior.
-- **Período**: começa na `ultima_atualizacao` da edição anterior; `periodo_inicio` só vale para a primeira edição. Na linha de datas, o período e a última atualização mostram a hora (quando a planilha traz); o início do monitoramento mostra só a data.
+- **Linha de datas da página 1**: `Início do monitoramento` = a **Data Coleta mais antiga** do Registro_Central (de todas as edições, só a data); `Última atualização` = a **Data Coleta mais recente** até a edição escolhida, com a hora da própria coleta ou, se ela não tiver hora, a da `ultima_atualizacao` quando for o mesmo dia. Sem nenhuma Data Coleta, valem `inicio_monitoramento` e `ultima_atualizacao` (o painel avisa). Não há mais período na linha. A `ultima_atualizacao` de Configuracoes_Gerais continua definindo a edição: cabeçalho "Edição de", nome do PDF e a que edição cada registro pertence.
 - **`Registro_Central` e `Acionamentos_Imprensa`**: a coluna `edicao_numero` é opcional. Vazia, a linha pertence à primeira edição cuja `ultima_atualizacao` é igual ou posterior à data dela (coleta; se vazia, a do post). Preenchida, ela vale. Linhas sem data aparecem em todas as edições.
 - **O que entra na edição N**: menções acumuladas, gráfico, linha do tempo e anexos somam tudo até N. "Novas menções" é só da edição N. O gráfico usa a **Data Coleta** no eixo (sem ela, a data do post). Acionamentos: os da edição N e os anteriores ainda em aberto. Na linha do tempo, uma divisória separa as novidades da edição N das edições anteriores.
 
@@ -79,7 +79,6 @@ Recomendados (sem eles o relatório mostra `[__]` ou esconde o item, e o painel 
 | Campo | Uso |
 |---|---|
 | `edicao_numero` | Edição nº |
-| `periodo_inicio` | Início do período da **primeira** edição (nas seguintes, o período começa na atualização da edição anterior) |
 | `risco_tendencia`, `status_tendencia` | Ex.: `Estável`, `Subindo`, `Caindo` (vira →, ↑, ↓) |
 
 Opcionais: `analise_revisao_data` ("Última revisão: …" na página 3; some quando vazio), `leitura_acionamentos` (bloco "Leitura" abaixo da tabela), `novas_mencoes_detalhe` (substitui o "Última: dd/mm (veículo)" calculado), `titulo_orgao`, `titulo_o_que_mudou`, `titulo_o_que_significa`.
@@ -102,6 +101,7 @@ As colunas são localizadas pelo **nome do cabeçalho** (linha 1), não pela pos
 - **Canal/Veiculo** vazio numa publicação: a rede é deduzida pelo link da matéria (instagram.com, x.com, facebook.com, linkedin.com, youtube.com; outro site = Imprensa), e o painel avisa.
 - **Canal/Veiculo** (demais tipos): nome da rede (`Instagram`, `X/Twitter`, `Facebook`, `LinkedIn`, `YouTube`, `TikTok`) ou do veículo de imprensa (`ES Hoje`...). Nome que não seja uma das seis redes conta como **Imprensa**. Vazio ou `-` = fora dos números (o painel avisa).
 - **Datas** sem ano usam o ano da `ultima_atualizacao`. Faixas como `09 a 13/08` são aceitas na linha do tempo.
+- **posicao_citacao** (opcional): parte(s) do print em que o Sicoob aparece, para o localizador do anexo ("Sicoob na parte 3 de 4"). Aceita `3`, `2 e 3`, `2-4`; `-` esconde o localizador. **Preenchida, vale sempre.** Vazia, o site procura "Sicoob" (maiúsculas ou minúsculas) no texto do PDF. Trava: em imagem (PNG/JPG) com uma parte só, o localizador diz "Sicoob nesta página"; em imagem com mais de uma parte ou PDF sem texto (escaneado), não dá para saber e o painel pede o preenchimento. O localizador é um link para a parte certa, também no PDF final.
 - **Linha do tempo**: o próximo marco vem primeiro; depois do mais recente para o mais antigo. Com `Envolve Sicoob? = NÃO`, o item aparece como contexto, qualquer que seja a tonalidade. Com `SIM` e tonalidade diferente de Negativa/Neutra/Positiva, aparece como `[A CLASSIFICAR]`.
 
 ## Desenvolvimento
