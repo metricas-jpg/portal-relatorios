@@ -114,6 +114,8 @@ export interface DiaGrafico { rotulo: string; porRede: Record<Rede, number>; tot
 export interface Clipping {
   idUnico: string; rede: Rede; veiculo: string; titulo: string; dataPost: string; dataColeta: string;
   link: string; autoria: string; tonalidade: string; tom: Tom; trecho: string; printUrl: string;
+  /** publicação da edição escolhida (só marcada a partir da 2ª edição) */
+  nova: boolean;
 }
 export interface Acionamento { data: string; veiculo: string; jornalista: string; demanda: string; prazo: string; resposta: string; status: string }
 
@@ -330,7 +332,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
       idUnico: `clip_${i}`, rede: r.rede || 'imp', veiculo: r.plataforma && r.plataforma !== '-' ? r.plataforma : '',
       titulo: r.fato, dataPost: r.dPost ? `${ddmm(r.dPost)}/${r.dPost.ano}` : r.dataPost, dataColeta: r.dataColeta,
       link: r.linkMateria, autoria: r.autoria, tonalidade: r.tonalidade, tom: tomDaTonalidade(r.tonalidade) || 'acl',
-      trecho: r.trecho, printUrl: r.printUrl,
+      trecho: r.trecho, printUrl: r.printUrl, nova: !primeira && daEdicao(r.ed),
     };
   });
 
