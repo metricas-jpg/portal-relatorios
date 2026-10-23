@@ -184,6 +184,11 @@
 .doc .anexo-topo { display: flex; justify-content: space-between; align-items: flex-start; }
 .doc .pilula { height: 21.6pt; min-width: 97.2pt; padding: 0 18pt; border-radius: 10.8pt; background: var(--roxo); color: #fff;
   font: 700 8.5pt/21.6pt var(--font); text-align: center; text-transform: uppercase; }
+.doc .anexo-topo-esq { display: flex; align-items: center; gap: 8pt; }
+/* selo discreto: publicação que entrou na edição escolhida */
+.doc .selo-nova { display: inline-flex; align-items: center; gap: 4pt; font: 700 7pt/8.4pt var(--font); letter-spacing: .4pt;
+  color: var(--turquesa); text-transform: uppercase; white-space: nowrap; }
+.doc .selo-nova::before { content: ""; width: 5pt; height: 5pt; border-radius: 50%; background: var(--turquesa); }
 .doc .anexo-topo .pos { font: 8pt/9.6pt var(--font); color: var(--cinza); margin-top: 4.03pt; white-space: pre; }
 .doc .veiculo { font: 700 9.5pt/11.4pt var(--font); color: var(--turquesa); margin-top: 13.5pt; }
 .doc .anexo-tit { font: 700 15pt/18.9pt var(--font); color: var(--petroleo); margin-top: 8.65pt;

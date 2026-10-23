@@ -99,7 +99,10 @@ export default function Anexo({ clip, indice, total, linha, protagonismo, planil
   const posicao = (k: number) => `Publicação ${indice + 1} de ${total}${partes > 1 ? `  ·  Parte ${k} de ${partes}` : ''}`;
   const topo = (k: number) => (
     <div className="anexo-topo">
-      <span className="pilula">{nomeRede(clip.rede)}</span>
+      <span className="anexo-topo-esq">
+        <span className="pilula">{nomeRede(clip.rede)}</span>
+        {clip.nova && <span className="selo-nova">Nova nesta edição</span>}
+      </span>
       <span className="pos">{posicao(k)}</span>
     </div>
   );
