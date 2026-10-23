@@ -339,11 +339,15 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     };
   });
 
-  // ---------- período (só datas): "18/10 a 20/10/2026"; o ano inicial aparece só se for outro ano ----------
-  const textoDe = geral.periodo_inicio || inicioData;
+  // ---------- período, com a hora quando a planilha traz: "18/10, 09h a 20/10, 14h" ----------
+  // o ano só aparece se o período atravessar a virada do ano (ele já está no início e na última
+  // atualização, e sem ele a linha de datas cabe mesmo com horas e minutos nas duas pontas)
+  const textoDe = geral.periodo_inicio || inicioMon;
   const dDe = lerData(textoDe, refUltima);
-  const periodoAte = refUltima ? `${ddmm(refUltima)}/${refUltima.ano}` : ultima.split(',')[0].trim();
-  const periodoDe = dDe ? `${ddmm(dDe)}${refUltima && dDe.ano !== refUltima.ano ? `/${dDe.ano}` : ''}` : textoDe.split(',')[0].trim();
+  const outroAno = !!(dDe && refUltima && dDe.ano !== refUltima.ano);
+  const hora = (t: string) => { const h = t.match(/,\s*(\d{2}h\d*)$/); return h ? `, ${h[1]}` : ''; };
+  const periodoAte = refUltima ? `${ddmm(refUltima)}${outroAno ? `/${refUltima.ano}` : ''}${hora(ultima)}` : ultima;
+  const periodoDe = dDe ? `${ddmm(dDe)}${outroAno ? `/${dDe.ano}` : ''}${hora(textoDe)}` : textoDe;
   if (dDe && refUltima && chaveDia(dDe) > chaveDia(refUltima)) {
     avisos.push(`Configuracoes_Gerais: o período começa (${textoDe}) depois da ultima_atualizacao (${ultima}). Confira as datas.`);
   }
@@ -361,7 +365,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   return {
     orgao: geral.titulo_orgao || 'Presidência - Superintendência Negócios Digitais, Marketing e Experiência do Cooperado',
     titulo: geral.titulo_crise || '', unidade: geral.subtitulo_unidade || '',
-    inicio: inicioMon, edicao: geral.edicao_numero || '',
+    inicio: inicioData, edicao: geral.edicao_numero || '',
     periodoDe, periodoAte, ultimaAtualizacao: ultima,
     risco: { nivel: nivelRisco, cor: corRisco, tendencia: geral.risco_tendencia || '', texto: geral.risco_texto || '' },
     status: { nivel: geral.status_crise || '', tendencia: geral.status_tendencia || '', texto: geral.status_texto || '' },
