@@ -363,7 +363,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const corRisco = nr === 'ALTO' ? '#003641' : nr === 'MEDIO' ? '#c9d200' : '#7db61c';
 
   return {
-    orgao: geral.titulo_orgao || 'Presidência - Superintendência Negócios Digitais, Marketing e Experiência do Cooperado',
+    orgao: geral.titulo_orgao || 'Superintendência de Negócios Digitais, Marketing e Experiência do Cooperado',
     titulo: geral.titulo_crise || '', unidade: geral.subtitulo_unidade || '',
     inicio: inicioData, edicao: geral.edicao_numero || '',
     periodoDe, periodoAte, ultimaAtualizacao: ultima,
