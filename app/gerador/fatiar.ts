@@ -10,6 +10,10 @@
  * 2. A faixa é cortada na altura de cada área (a primeira, menor, e as de continuação).
  *    O corte procura uma faixa branca logo acima do limite, para não cortar uma linha de texto ao meio.
  *    Uma sobra pequena no fim não vira página própria: entra na página anterior, um pouco reduzida.
+ * 3. Localizador de citação: em PDFs com texto, procura "Sicoob" (maiúsculas ou minúsculas) e
+ *    devolve em qual(is) parte(s) a palavra aparece. Trava de segurança: PDF sem texto (escaneado,
+ *    print salvo como imagem) ou imagem que ocupa mais de uma parte devolvem `null` (não dá para
+ *    saber), e o anexo usa a coluna posicao_citacao da planilha.
  */
 
 const LARGURA_PX = 1300; // resolução das fatias (≈ 1,8x a largura da área em tela; ~175 dpi no PDF)
@@ -17,15 +21,23 @@ const SOBRA_MAX = 0.25;  // sobra menor que 25% de uma área é absorvida pela p
 
 /** uma fatia pronta: endereço da imagem e se ela precisa ser reduzida para caber (sobra absorvida) */
 export interface Fatia { src: string; reduzida: boolean }
+/** fatias + partes (1, 2...) em que o Sicoob aparece; null = não foi possível ler */
+export interface Resultado { fatias: Fatia[]; citacao: number[] | null; tipo: 'imagem' | 'pdf' | 'pdf-sem-texto' }
+
+const SICOOB = /s\s?i\s?c\s?o\s?o\s?b/gi;
+const TEXTO_MINIMO = 30; // menos letras que isso no PDF inteiro = PDF sem camada de texto
 
 declare global { interface Window { pdfjsLib?: PdfJs } }
 interface PdfJs {
   GlobalWorkerOptions: { workerSrc: string };
   getDocument(src: { data: ArrayBuffer }): { promise: Promise<PdfDoc> };
+  Util: { transform(a: number[], b: number[]): number[] };
 }
+interface ItemTexto { str?: string; transform?: number[]; height?: number }
 interface PdfDoc { numPages: number; getPage(n: number): Promise<PdfPage> }
 interface PdfPage {
-  getViewport(o: { scale: number }): { width: number; height: number };
+  getViewport(o: { scale: number }): { width: number; height: number; transform: number[] };
+  getTextContent(): Promise<{ items: ItemTexto[] }>;
   render(o: { canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number } }): { promise: Promise<void> };
 }
 
@@ -48,7 +60,11 @@ function pdfjs(): Promise<PdfJs> {
 }
 
 /** trecho de uma página dentro da faixa contínua */
-interface Trecho { canvas: HTMLCanvasElement; y0: number; altura: number; branca: Uint8Array }
+interface Trecho {
+  canvas: HTMLCanvasElement; y0: number; altura: number; branca: Uint8Array;
+  /** linhas (dentro do trecho) em que "Sicoob" aparece no texto do PDF */
+  marcas?: number[];
+}
 
 function linhasBrancas(canvas: HTMLCanvasElement): Uint8Array {
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
@@ -117,7 +133,31 @@ function novoCanvas(w: number, h: number) {
   return { c, ctx };
 }
 
-async function faixaDoArquivo(blob: Blob): Promise<Trecho[]> {
+/**
+ * Onde "Sicoob" aparece numa página do PDF, em linhas do canvas (meio da linha de texto).
+ * Junta os pedaços de texto da página para achar a palavra mesmo quando o PDF a divide ("Sic" + "oob").
+ */
+async function procurarSicoob(lib: PdfJs, pagina: PdfPage, vp: { transform: number[] }): Promise<{ ys: number[]; letras: number }> {
+  let itens: ItemTexto[] = [];
+  try { itens = (await pagina.getTextContent()).items || []; } catch { return { ys: [], letras: 0 }; }
+  let texto = '';
+  const inicio: number[] = []; // posição de cada item no texto juntado
+  itens.forEach(it => { inicio.push(texto.length); texto += it.str || ''; });
+  const letras = texto.replace(/\s/g, '').length;
+  const ys: number[] = [];
+  for (const m of texto.matchAll(SICOOB)) {
+    let k = inicio.length - 1;
+    while (k > 0 && inicio[k] > (m.index || 0)) k--;
+    const it = itens[k];
+    if (!it?.transform) continue;
+    const [, , , , , base] = lib.Util.transform(vp.transform, it.transform);
+    const alt = Math.abs((it.height || 0) * vp.transform[3]) || 10;
+    ys.push(base - alt / 2);
+  }
+  return { ys, letras };
+}
+
+async function faixaDoArquivo(blob: Blob): Promise<{ trechos: Trecho[]; textoLido: boolean | null }> {
   if (blob.type.startsWith('image/')) {
     const url = URL.createObjectURL(blob);
     try {
@@ -135,20 +175,29 @@ async function faixaDoArquivo(blob: Blob): Promise<Trecho[]> {
         trechos.push({ canvas: c, y0: 0, altura: h, branca: linhasBrancas(c) });
       }
       const ap = trechos.length === 1 ? aparar(trechos[0].canvas) : null;
-      return ap ? [ap] : trechos;
+      return { trechos: ap ? [ap] : trechos, textoLido: null };
     } finally { URL.revokeObjectURL(url); }
   }
   const lib = await pdfjs();
   const pdf = await lib.getDocument({ data: await blob.arrayBuffer() }).promise;
   const trechos: Trecho[] = [];
+  let letras = 0;
   for (let n = 1; n <= pdf.numPages; n++) {
     const pagina = await pdf.getPage(n);
     const base = pagina.getViewport({ scale: 1 });
     const vp = pagina.getViewport({ scale: LARGURA_PX / base.width });
     const { c, ctx } = novoCanvas(Math.round(vp.width), Math.round(vp.height));
     await pagina.render({ canvasContext: ctx, viewport: vp }).promise;
+    const busca = await procurarSicoob(lib, pagina, vp);
+    letras += busca.letras;
     const t = aparar(c, true);
     if (t) {
+      // só vale a citação que ficou visível (fora do cabeçalho/rodapé descartado e das margens)
+      t.marcas = busca.ys.map(y => Math.round(y - t.y0)).filter(y => {
+        if (y < 0 || y >= t.altura) return false;
+        for (let k = Math.max(0, y - 6); k <= Math.min(t.altura - 1, y + 6); k++) if (!t.branca[k]) return true;
+        return false;
+      });
       // o que foi marcado como cabeçalho/rodapé dentro do trecho é pintado de branco
       const ctx2 = c.getContext('2d', { willReadFrequently: true })!;
       ctx2.fillStyle = '#fff';
@@ -156,16 +205,17 @@ async function faixaDoArquivo(blob: Blob): Promise<Trecho[]> {
       trechos.push(t);
     }
   }
-  return trechos;
+  return { trechos, textoLido: letras >= TEXTO_MINIMO };
 }
 
 /**
  * @param proporcoes altura/largura de cada área: [primeira, continuação]
- * @returns fatias na ordem; a 1ª vai na página do anexo, as demais nas continuações
+ * @returns fatias na ordem (a 1ª vai na página do anexo, as demais nas continuações) e as partes
+ *          em que o Sicoob aparece
  */
-export async function fatiarArquivo(blob: Blob, proporcoes: [number, number]): Promise<Fatia[]> {
-  const trechos = await faixaDoArquivo(blob);
-  if (!trechos.length) return [];
+export async function fatiarArquivo(blob: Blob, proporcoes: [number, number]): Promise<Resultado> {
+  const { trechos, textoLido } = await faixaDoArquivo(blob);
+  if (!trechos.length) return { fatias: [], citacao: null, tipo: 'imagem' };
   const largura = trechos[0].canvas.width;
   // índice global de linhas da faixa
   const total = trechos.reduce((a, t) => a + t.altura, 0);
@@ -213,5 +263,23 @@ export async function fatiarArquivo(blob: Blob, proporcoes: [number, number]): P
     fatias.push({ src: URL.createObjectURL(arquivo), reduzida: absorveu && i === cortes.length - 1 });
   }
   trechos.forEach(t => { t.canvas.width = t.canvas.height = 0; });
-  return fatias;
+
+  // 4. localizador de citação (trava: imagem com mais de uma parte ou PDF sem texto = null)
+  let citacao: number[] | null;
+  if (textoLido === null) citacao = fatias.length === 1 ? [1] : null;
+  else if (!textoLido) citacao = null;
+  else {
+    const partes = new Set<number>();
+    let base = 0;
+    for (const t of trechos) {
+      (t.marcas || []).forEach(y => {
+        const g = base + y;
+        const i = cortes.findIndex(c => g < c.fim);
+        partes.add((i < 0 ? cortes.length - 1 : i) + 1);
+      });
+      base += t.altura;
+    }
+    citacao = [...partes].sort((a, b) => a - b);
+  }
+  return { fatias, citacao, tipo: textoLido === null ? 'imagem' : textoLido ? 'pdf' : 'pdf-sem-texto' };
 }

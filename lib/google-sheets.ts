@@ -36,6 +36,8 @@ export interface RegistroCentral {
   edicao: string; dataPost: string; dataColeta: string; linkMateria: string; plataforma: string; envolveSicoob: boolean;
   tipo: string; fato: string; textoTimeline: string; tonalidade: string; mostrarTimeline: boolean;
   proximoMarco: boolean; gerarClipping: boolean; trecho: string; autoria: string; volume: number; printUrl: string;
+  /** posicao_citacao (opcional): parte(s) do print em que o Sicoob aparece; preenchida, vale mais que a leitura automática */
+  posicaoCitacao: string;
   /** linha na aba Registro_Central (para avisos) */
   linha: number;
 }
@@ -72,6 +74,7 @@ const COLUNAS_REGISTRO: Coluna[] = [
   { campo: 'trecho', nome: 'Trecho sobre o Sicoob', nomes: ['trechosobreosicoob', 'trecho'], pos: 15 },
   { campo: 'volume', nome: 'Volume Agrupado', nomes: ['volumeagrupadovazio1', 'volumeagrupado', 'volume'], pos: 16 },
   { campo: 'printUrl', nome: 'coluna_print', nomes: ['colunaprint', 'linkdoprint', 'print'], pos: 17 },
+  { campo: 'posicaoCitacao', nome: 'posicao_citacao', nomes: ['posicaocitacao', 'posicaodacitacao', 'localizadordecitacao', 'partedacitacao'], pos: 18 },
 ];
 
 const COLUNAS_ACIONAMENTOS: Coluna[] = [
@@ -195,7 +198,7 @@ export async function obterDadosDoRelatorio(spreadsheetId: string): Promise<Rela
 
     // ---------- Registro_Central ----------
     const [cabReg = [], ...linhasReg] = grade;
-    const p = mapearColunas(cabReg.map(c => c.texto), COLUNAS_REGISTRO, 'Registro_Central', avisosLeitura, ['edicao', 'idPrint']);
+    const p = mapearColunas(cabReg.map(c => c.texto), COLUNAS_REGISTRO, 'Registro_Central', avisosLeitura, ['edicao', 'idPrint', 'posicaoCitacao']);
     const registros: RegistroCentral[] = [];
     linhasReg.forEach((l, i) => {
       if (vazioLinha(l)) return;
@@ -208,7 +211,7 @@ export async function obterDadosDoRelatorio(spreadsheetId: string): Promise<Rela
         envolveSicoob: sim(v('envolveSicoob')), tipo: v('tipo'), fato: v('fato'), textoTimeline: v('textoTimeline'),
         tonalidade: v('tonalidade'), mostrarTimeline: sim(v('mostrarTimeline')), proximoMarco: sim(v('proximoMarco')),
         gerarClipping: sim(v('gerarClipping')), trecho: v('trecho'), autoria: v('autoria'),
-        volume: parseInt(v('volume')) || 1, printUrl: url('printUrl'), linha: i + 2,
+        volume: parseInt(v('volume')) || 1, printUrl: url('printUrl'), posicaoCitacao: v('posicaoCitacao'), linha: i + 2,
       });
     });
 
@@ -259,10 +262,6 @@ export function escolherEdicao(dados: RelatorioDados, numero?: number): Relatori
     const herdado = [...anteriores].reverse().find(e => (e.dados[campo] || '').trim());
     if (herdado) geral[campo] = herdado.dados[campo];
   }
-  // período: começa na última atualização da edição anterior (assim uma linha copiada com
-  // periodo_inicio antigo não erra o período); periodo_inicio da linha vale para a 1ª edição
-  const ant = anteriores[anteriores.length - 1];
-  if (ant?.ultimaAtualizacao) geral.periodo_inicio = ant.ultimaAtualizacao;
   if (!(geral.edicao_numero || '').trim()) geral.edicao_numero = atual.rotulo;
   return { ...dados, geral, edicao: atual.numero };
 }

@@ -199,8 +199,10 @@
 .doc .meta3 .k { font: 700 6.5pt/7.8pt var(--font); color: var(--cinza); }
 .doc .meta3 .v { font: 700 9pt/10.8pt var(--font); color: var(--texto); margin-top: 6.73pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .doc .tags { display: flex; gap: 8.6pt; margin-top: 12.5pt; }
-.doc .tags span { height: 19.69pt; padding: 0 18.7pt; border: .99pt solid; border-radius: 9.85pt; background: #fff;
+.doc .tags span, .doc .tags a.citacao { height: 19.69pt; padding: 0 18.7pt; border: .99pt solid; border-radius: 9.85pt; background: #fff;
   font: 700 7pt/17.71pt var(--font); text-transform: uppercase; white-space: nowrap; }
+/* localizador de citação (link para a parte do print) */
+.doc .tags a.citacao { border-color: var(--verde-escuro); color: var(--verde-escuro); text-decoration: none; }
 .doc .resumo { background: var(--amarelo); border-radius: 5.76pt; min-height: 80.6pt; padding: 9pt 14.4pt 14.4pt; margin-top: 13.21pt; flex: none; }
 .doc .resumo .rot { color: var(--oliva); }
 .doc .resumo p { font: 9pt/11.9pt var(--font); color: var(--texto); margin: 8.23pt 0 0; white-space: pre-wrap;

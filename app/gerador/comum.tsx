@@ -30,7 +30,7 @@ export function tendencia(t: string) {
   return `${seta}  ${t.toUpperCase()}`;
 }
 
-export const RODAPE = 'Documento interno · Sicoob — não redistribuir fora do ambiente autorizado.';
+export const RODAPE = 'Comunicação para uso interno. É proibido veicular ou distribuir.';
 
 export function Rodape() {
   return (
