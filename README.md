@@ -93,6 +93,14 @@ Em qualquer texto, `**trecho**` sai em negrito.
 
 O arquivo do Drive (PDF, PNG ou JPG) é convertido em imagem no navegador e aparece igual na tela e no PDF final, sem a barra do leitor de PDF. O conteúdo é mostrado **inteiro**: as páginas do arquivo são emendadas numa faixa contínua, sem as margens brancas, e cortadas no tamanho da área de print. O começo fica na página do anexo e o restante segue em páginas de continuação ("Parte 2 de 5"...). O corte procura um espaço em branco para não partir uma linha de texto. Cabeçalho e rodapé que o navegador imprime nos PDFs (data, endereço, "1/2") são descartados, e uma sobra pequena no fim entra na página anterior em vez de virar uma página própria. Para a tela não ficar pesada, cada print só é carregado quando o anexo chega perto da área visível, no máximo 2 ao mesmo tempo. O botão **Gerar Relatório Final** carrega os que faltam e espera todos terminarem antes de abrir a impressão. O conversor de PDF (pdf.js 3.11.174) é carregado do cdnjs.
 
+### `Acionamentos_Imprensa`
+
+Colunas (localizadas pelo nome do cabeçalho): **Data**, **Veiculo**, **Jornalista**, **Pauta**, **Atendido?** e, opcional, `edicao_numero`. Os nomes do modelo antigo (`Demanda`, `Status`) ainda são aceitos.
+
+- **Atendido?** `SIM` = atendido (fechado). `NÃO` ou vazio = em aberto (vazio gera aviso). Na tabela, os em aberto ficam em negrito.
+- Cada edição mostra os acionamentos dela mais os de edições anteriores ainda em aberto. O card da página 1 mostra os novos e quantos estão em aberto.
+- Linha sem Data, Veiculo ou Pauta fica fora do relatório (o painel avisa).
+
 ### `Registro_Central`
 
 As colunas são localizadas pelo **nome do cabeçalho** (linha 1), não pela posição: a ordem pode mudar sem quebrar o relatório. Se um nome for alterado, o painel avisa e a posição padrão é usada.

@@ -43,7 +43,7 @@ export interface RegistroCentral {
 }
 
 export interface AcionamentoImprensa {
-  edicao: string; data: string; veiculo: string; jornalista: string; demanda: string; prazo: string; resposta: string; status: string;
+  edicao: string; data: string; veiculo: string; jornalista: string; pauta: string; atendido: string;
   linha: number;
 }
 
@@ -77,15 +77,15 @@ const COLUNAS_REGISTRO: Coluna[] = [
   { campo: 'posicaoCitacao', nome: 'posicao_citacao', nomes: ['posicaocitacao', 'posicaodacitacao', 'localizadordecitacao', 'partedacitacao'], pos: 18 },
 ];
 
+/** Acionamentos_Imprensa: Data, Veiculo, Jornalista, Pauta, Atendido? (+ edicao_numero opcional) */
 const COLUNAS_ACIONAMENTOS: Coluna[] = [
-  { campo: 'edicao', nome: 'edicao_numero', nomes: ['edicaonumero', 'edicao', 'versao'], pos: 0 },
-  { campo: 'data', nome: 'Data', nomes: ['data'], pos: 1 },
-  { campo: 'veiculo', nome: 'Veiculo', nomes: ['veiculo'], pos: 2 },
-  { campo: 'jornalista', nome: 'Jornalista', nomes: ['jornalista'], pos: 3 },
-  { campo: 'demanda', nome: 'Demanda', nomes: ['demanda'], pos: 4 },
-  { campo: 'prazo', nome: 'Prazo', nomes: ['prazo'], pos: 5 },
-  { campo: 'resposta', nome: 'Resposta', nomes: ['resposta'], pos: 6 },
-  { campo: 'status', nome: 'Status', nomes: ['status'], pos: 7 },
+  { campo: 'data', nome: 'Data', nomes: ['data'], pos: 0 },
+  { campo: 'veiculo', nome: 'Veiculo', nomes: ['veiculo'], pos: 1 },
+  { campo: 'jornalista', nome: 'Jornalista', nomes: ['jornalista'], pos: 2 },
+  // "Demanda" e "Status" são os nomes do modelo antigo
+  { campo: 'pauta', nome: 'Pauta', nomes: ['pauta', 'demanda'], pos: 3 },
+  { campo: 'atendido', nome: 'Atendido?', nomes: ['atendido', 'status'], pos: 4 },
+  { campo: 'edicao', nome: 'edicao_numero', nomes: ['edicaonumero', 'edicao', 'versao'], pos: 5 },
 ];
 
 /**
@@ -224,7 +224,7 @@ export async function obterDadosDoRelatorio(spreadsheetId: string): Promise<Rela
       const v = (campo: string) => (q[campo] >= 0 ? String(l[q[campo]] ?? '').trim() : '');
       acionamentos.push({
         edicao: v('edicao'), data: v('data'), veiculo: v('veiculo'), jornalista: v('jornalista'),
-        demanda: v('demanda'), prazo: v('prazo'), resposta: v('resposta'), status: v('status'), linha: i + 2,
+        pauta: v('pauta'), atendido: v('atendido'), linha: i + 2,
       });
     });
 
