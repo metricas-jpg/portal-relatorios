@@ -161,6 +161,8 @@
 .doc .tab td { height: 26.7pt; color: var(--texto); padding-block: 4pt; }
 .doc .tab tbody:nth-of-type(even) td { background: var(--zebra); }
 .doc .tab tr { break-inside: avoid; }
+/* acionamento ainda não atendido */
+.doc .tab td.aberto { font-weight: 700; color: var(--petroleo); }
 
 .doc .leitura { display: grid; grid-template-columns: 54pt 1fr; margin-top: 21.55pt; }
 .doc .leitura b { font: 700 7.5pt/9pt var(--font); color: var(--turquesa); padding-top: .05pt; }

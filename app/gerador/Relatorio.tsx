@@ -210,7 +210,7 @@ function Pagina2({ r, linha }: { r: Dados; linha: string }) {
     ...(r.acionamentos.linhas.length
       ? r.acionamentos.linhas.map((a, i) => ({
           id: `ac${i}`, grupo: 'tab' as const, secao: S2,
-          no: <tr><td>{a.data}</td><td>{a.veiculo}</td><td>{a.jornalista}</td><td>{a.demanda}</td><td>{a.prazo}</td><td>{a.resposta}</td><td>{a.status}</td></tr>,
+          no: <tr><td>{a.data}</td><td>{a.veiculo}</td><td>{a.jornalista}</td><td>{a.pauta}</td><td className={a.emAberto ? 'aberto' : ''}>{a.atendido}</td></tr>,
         }))
       : [{ id: 'ac-vazio', no: <p className="nota">Nenhum acionamento no período.</p>, secao: S2 }]),
     ...(r.leitura ? [{ id: 'leitura', secao: S2, no: <div className="leitura"><b>LEITURA</b><span>{rico(r.leitura)}</span></div> }] : []),
@@ -221,8 +221,8 @@ function Pagina2({ r, linha }: { r: Dados; linha: string }) {
       moldura={<><CabecalhoInterno titulo="EVOLUÇÃO · ACIONAMENTOS" linha={linha} /><Rodape /></>}
       blocos={blocos}
       tabela={{
-        colgroup: <colgroup><col style={{ width: '44.6pt' }} /><col style={{ width: '68.4pt' }} /><col style={{ width: '68.4pt' }} /><col style={{ width: '126pt' }} /><col style={{ width: '57.6pt' }} /><col style={{ width: '100.8pt' }} /><col style={{ width: '64.8pt' }} /></colgroup>,
-        cabecalho: <tr><th>Data</th><th>Veículo</th><th>Jornalista</th><th>Demanda</th><th>Prazo</th><th>Resposta</th><th>Status</th></tr>,
+        colgroup: <colgroup><col style={{ width: '44.6pt' }} /><col style={{ width: '100.8pt' }} /><col style={{ width: '100.8pt' }} /><col style={{ width: '223.4pt' }} /><col style={{ width: '61pt' }} /></colgroup>,
+        cabecalho: <tr><th>Data</th><th>Veículo</th><th>Jornalista</th><th>Pauta</th><th>Atendido?</th></tr>,
       }}
     />
   );

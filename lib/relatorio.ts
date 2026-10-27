@@ -122,7 +122,7 @@ export interface Clipping {
   /** posicao_citacao da planilha (vazio = o site procura "Sicoob" no print) */
   posicaoCitacao: string;
 }
-export interface Acionamento { data: string; veiculo: string; jornalista: string; demanda: string; prazo: string; resposta: string; status: string }
+export interface Acionamento { data: string; veiculo: string; jornalista: string; pauta: string; atendido: string; emAberto: boolean }
 
 export interface Relatorio {
   orgao: string; titulo: string; unidade: string;
@@ -327,23 +327,31 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   }
 
   // ---------- acionamentos: os desta edição + os de edições anteriores ainda em aberto ----------
-  const fechado = (st: string) => /fechad|encerrad|respondid|conclu|finaliz/i.test(normalizar(st).toLowerCase());
+  // Atendido_ou_nao = SIM fecha o acionamento; NÃO ou vazio = em aberto (textos do modelo antigo também valem)
+  const sim = (v: string) => ['SIM', 'S', 'TRUE', 'VERDADEIRO'].includes(normalizar(v));
+  const atendido = (v: string) => sim(v) || /^(fechad|encerrad|respondid|conclu|finaliz|atendid)/i.test(normalizar(v).toLowerCase());
+  const rotuloAtendido = (v: string) => sim(v) ? 'Sim' : ['NAO', 'N', 'FALSE', 'FALSO'].includes(normalizar(v)) ? 'Não' : v.trim() || '—';
   const linhasAc: Acionamento[] = [];
   let novosAc = 0;
   acionamentos.forEach((a, i) => {
     const linha = a.linha || i + 2;
-    const faltam = (['data', 'veiculo', 'demanda'] as const).filter(k => !(a[k] || '').trim());
+    const faltam = (['data', 'veiculo', 'pauta'] as const).filter(k => !(a[k] || '').trim());
     if (faltam.length) { avisar('Acionamentos_Imprensa', `falta ${faltam.join(', ')}; a linha ficou fora do relatório`, linha); return; }
     const ed = edicaoDe(a.edicao, lerData(a.data, refUltima), 'Acionamentos_Imprensa', linha);
     if (!ate(ed)) return;
     const novo = daEdicao(ed);
-    if (!novo && fechado(a.status)) return;
+    const fechado = atendido(a.atendido);
+    if (!novo && fechado) return;
+    if (!a.atendido.trim()) avisar('Acionamentos_Imprensa', 'Atendido_ou_nao vazio; contado como em aberto', linha);
     if (novo) novosAc++;
     // data completa (20/10/2026) vira dd/mm, como na linha do tempo, para caber na coluna
     const d = lerData(a.data, refUltima);
-    linhasAc.push(d && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(a.data.trim()) ? { ...a, data: ddmm(d) } : a);
+    linhasAc.push({
+      data: d && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(a.data.trim()) ? ddmm(d) : a.data,
+      veiculo: a.veiculo, jornalista: a.jornalista, pauta: a.pauta, atendido: rotuloAtendido(a.atendido), emAberto: !fechado,
+    });
   });
-  const abertos = linhasAc.filter(a => !fechado(a.status)).length;
+  const abertos = linhasAc.filter(a => a.emAberto).length;
 
   // ---------- anexos: todos os marcados, desta edição e das anteriores ----------
   const clippings: Clipping[] = regs.filter(r => r.gerarClipping).map((r, i) => {
