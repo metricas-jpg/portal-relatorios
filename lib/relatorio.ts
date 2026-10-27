@@ -327,7 +327,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   }
 
   // ---------- acionamentos: os desta edição + os de edições anteriores ainda em aberto ----------
-  // Atendido? = SIM fecha o acionamento; NÃO ou vazio = em aberto (textos do modelo antigo também valem)
+  // Atendido_ou_nao = SIM fecha o acionamento; NÃO ou vazio = em aberto (textos do modelo antigo também valem)
   const sim = (v: string) => ['SIM', 'S', 'TRUE', 'VERDADEIRO'].includes(normalizar(v));
   const atendido = (v: string) => sim(v) || /^(fechad|encerrad|respondid|conclu|finaliz|atendid)/i.test(normalizar(v).toLowerCase());
   const rotuloAtendido = (v: string) => sim(v) ? 'Sim' : ['NAO', 'N', 'FALSE', 'FALSO'].includes(normalizar(v)) ? 'Não' : v.trim() || '—';
@@ -342,7 +342,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     const novo = daEdicao(ed);
     const fechado = atendido(a.atendido);
     if (!novo && fechado) return;
-    if (!a.atendido.trim()) avisar('Acionamentos_Imprensa', '"Atendido?" vazio; contado como em aberto', linha);
+    if (!a.atendido.trim()) avisar('Acionamentos_Imprensa', 'Atendido_ou_nao vazio; contado como em aberto', linha);
     if (novo) novosAc++;
     // data completa (20/10/2026) vira dd/mm, como na linha do tempo, para caber na coluna
     const d = lerData(a.data, refUltima);

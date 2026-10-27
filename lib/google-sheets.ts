@@ -77,14 +77,14 @@ const COLUNAS_REGISTRO: Coluna[] = [
   { campo: 'posicaoCitacao', nome: 'posicao_citacao', nomes: ['posicaocitacao', 'posicaodacitacao', 'localizadordecitacao', 'partedacitacao'], pos: 18 },
 ];
 
-/** Acionamentos_Imprensa: Data, Veiculo, Jornalista, Pauta, Atendido? (+ edicao_numero opcional) */
+/** Acionamentos_Imprensa: Data, Veiculo, Jornalista, Pauta, Atendido_ou_nao (+ edicao_numero opcional) */
 const COLUNAS_ACIONAMENTOS: Coluna[] = [
   { campo: 'data', nome: 'Data', nomes: ['data'], pos: 0 },
   { campo: 'veiculo', nome: 'Veiculo', nomes: ['veiculo'], pos: 1 },
   { campo: 'jornalista', nome: 'Jornalista', nomes: ['jornalista'], pos: 2 },
   // "Demanda" e "Status" são os nomes do modelo antigo
   { campo: 'pauta', nome: 'Pauta', nomes: ['pauta', 'demanda'], pos: 3 },
-  { campo: 'atendido', nome: 'Atendido?', nomes: ['atendido', 'status'], pos: 4 },
+  { campo: 'atendido', nome: 'Atendido_ou_nao', nomes: ['atendidoounao', 'atendido', 'status'], pos: 4 },
   { campo: 'edicao', nome: 'edicao_numero', nomes: ['edicaonumero', 'edicao', 'versao'], pos: 5 },
 ];
 

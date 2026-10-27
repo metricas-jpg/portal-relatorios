@@ -95,9 +95,9 @@ O arquivo do Drive (PDF, PNG ou JPG) é convertido em imagem no navegador e apar
 
 ### `Acionamentos_Imprensa`
 
-Colunas (localizadas pelo nome do cabeçalho): **Data**, **Veiculo**, **Jornalista**, **Pauta**, **Atendido?** e, opcional, `edicao_numero`. Os nomes do modelo antigo (`Demanda`, `Status`) ainda são aceitos.
+Colunas (localizadas pelo nome do cabeçalho): **Data**, **Veiculo**, **Jornalista**, **Pauta**, **Atendido_ou_nao** e, opcional, `edicao_numero`. Os nomes do modelo antigo (`Demanda`, `Status`, `Atendido?`) ainda são aceitos.
 
-- **Atendido?** `SIM` = atendido (fechado). `NÃO` ou vazio = em aberto (vazio gera aviso). Na tabela, os em aberto ficam em negrito.
+- **Atendido_ou_nao** `SIM` = atendido (fechado). `NÃO` ou vazio = em aberto (vazio gera aviso). Na tabela, os em aberto ficam em negrito.
 - Cada edição mostra os acionamentos dela mais os de edições anteriores ainda em aberto. O card da página 1 mostra os novos e quantos estão em aberto.
 - Linha sem Data, Veiculo ou Pauta fica fora do relatório (o painel avisa).
 
