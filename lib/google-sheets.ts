@@ -163,6 +163,20 @@ export async function lerGrade(spreadsheetId: string, range: string): Promise<Ce
 
 export { numeroEdicao };
 
+/**
+ * ultima_atualizacao (data) + hora_atualizacao (hora) → "22/10/2026 18:00". A hora aceita "18:00",
+ * "18:00:00", "18h", "18h30" ou "18". Sem hora, fica só a data (ou a hora que já estiver na data).
+ */
+export function juntarDataHora(data: string, hora: string): { valor: string; horaInvalida: boolean } {
+  const d = (data || '').trim(), h = (hora || '').trim();
+  if (!h) return { valor: d, horaInvalida: false };
+  const m = h.match(/(\d{1,2})\s*(?::|h)\s*(\d{2})?(?::\d{2})?\s*h?\s*$/i) || h.match(/^(\d{1,2})$/);
+  if (!m || +m[1] > 23 || (m[2] && +m[2] > 59)) return { valor: d, horaInvalida: true };
+  if (!d) return { valor: d, horaInvalida: false };
+  const soData = d.split(/[\s,]+/)[0];
+  return { valor: `${soData} ${m[1].padStart(2, '0')}:${m[2] || '00'}`, horaInvalida: false };
+}
+
 const vazioLinha = (l: unknown[]) => !l.some(c => String((c as Celula)?.texto ?? c ?? '').trim());
 
 export async function obterDadosDoRelatorio(spreadsheetId: string): Promise<RelatorioDados> {
@@ -181,6 +195,12 @@ export async function obterDadosDoRelatorio(spreadsheetId: string): Promise<Rela
       if (vazioLinha(l)) return;
       const dados: Record<string, string> = {};
       cabGeral.forEach((chave, idx) => { if (chave) dados[String(chave).trim()] = String(l[idx] ?? '').trim(); });
+      // linha só com valores pré-preenchidos (ex.: titulo_orgao), sem número nem data: ainda não é uma edição
+      if (!(dados.edicao_numero || '').trim() && !(dados.ultima_atualizacao || '').trim()) return;
+      // a hora do fechamento fica numa coluna própria (hora_atualizacao)
+      const junto = juntarDataHora(dados.ultima_atualizacao || '', dados.hora_atualizacao || '');
+      if (junto.horaInvalida) avisosLeitura.push(`Configuracoes_Gerais, linha ${i + 2}: hora_atualizacao "${dados.hora_atualizacao}" não reconhecida (use 18:00); a edição ficou sem hora.`);
+      dados.ultima_atualizacao = junto.valor;
       const rotulo = dados.edicao_numero || '';
       let numero = numeroEdicao(rotulo);
       if (numero == null) {
@@ -198,7 +218,7 @@ export async function obterDadosDoRelatorio(spreadsheetId: string): Promise<Rela
 
     // ---------- Registro_Central ----------
     const [cabReg = [], ...linhasReg] = grade;
-    const p = mapearColunas(cabReg.map(c => c.texto), COLUNAS_REGISTRO, 'Registro_Central', avisosLeitura, ['edicao', 'idPrint', 'posicaoCitacao']);
+    const p = mapearColunas(cabReg.map(c => c.texto), COLUNAS_REGISTRO, 'Registro_Central', avisosLeitura, ['edicao', 'idPrint', 'posicaoCitacao', 'volume']);
     const registros: RegistroCentral[] = [];
     linhasReg.forEach((l, i) => {
       if (vazioLinha(l)) return;

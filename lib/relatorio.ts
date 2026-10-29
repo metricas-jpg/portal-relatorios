@@ -198,12 +198,16 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const inicioMon = geral.inicio_monitoramento || '';
 
   // ---------- edições ----------
-  // cada edição vai até a sua ultima_atualizacao; um registro sem edicao_numero pertence à
-  // primeira edição cuja última atualização é igual ou posterior à data dele
+  // cada edição vai da atualização (data + hora) da edição anterior até a sua; um registro sem
+  // edicao_numero pertence à primeira edição que fecha depois dele. Data sem hora é comparada pelo dia
+  // (conta na primeira edição que fecha naquele dia ou depois); edição sem hora fecha no fim do dia.
   const limites = edicoes
     .map(e => ({ numero: e.numero, fim: lerData(e.ultimaAtualizacao, refUltima) }))
     .filter(e => e.fim)
-    .map(e => ({ numero: e.numero, fim: chaveDia(e.fim!) }));
+    .map(e => {
+      const f = e.fim!;
+      return { numero: e.numero, dia: chaveDia(f), ts: f.temHora ? f.ts : new Date(f.ano, f.mes - 1, f.dia, 23, 59, 59, 999).getTime() };
+    });
   const N = dados.edicao ?? edicoes[edicoes.length - 1]?.numero ?? 1;
   const primeira = !edicoes.some(e => e.numero < N);
   const ultimaEdicao = edicoes[edicoes.length - 1]?.numero ?? N;
@@ -216,8 +220,13 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     if (!data) return null;
     if (!limites.length) return N;
     const k = chaveDia(data);
-    const e = limites.find(x => k <= x.fim);
-    if (e) return e.numero;
+    const e = data.temHora ? limites.find(x => data.ts <= x.ts) : limites.find(x => k <= x.dia);
+    if (e) {
+      if (!data.temHora && limites.filter(x => x.dia === k).length > 1) {
+        avisar(aba, 'data sem hora num dia em que fecha mais de uma edição; contei na primeira delas (preencha a hora ou o edicao_numero)', linha);
+      }
+      return e.numero;
+    }
     avisar(aba, 'data posterior à última atualização da última edição; conta na última edição até a próxima ser criada', linha);
     return ultimaEdicao;
   };
