@@ -1,8 +1,11 @@
+'use client';
+
 import { Fragment, type CSSProperties } from 'react';
 import Paginador, { type Bloco } from './Paginador';
 import Anexo from './Anexo';
 import { st, mv, lim, rico, vazio, tendencia, Rodape, CabecalhoInterno } from './comum';
 import AjustePagina1 from './AjustePagina1';
+import { useModulos } from './Modulos';
 import { REDES, type Relatorio as Dados, type ItemTimeline, type Tom } from '@/lib/relatorio';
 
 /* ============================== página 1 ============================== */
@@ -60,6 +63,7 @@ function Pagina1({ r }: { r: Dados }) {
   }));
   const legGrafico = [[32.4, 43.9], [102.2, 113.8], [176.8, 188.3], [251.3, 262.8], [321.1, 332.6], [391, 402.5], [460.8, 472.3]] as const;
   const nAc = r.acionamentos.novos;
+  const comAcionamentos = useModulos().ligado('acionamentos');
   // deslocamentos da página elástica (ver gerador.css e AjustePagina1)
   const H1 = '--dh1', H2 = '--dh2', H3 = '--dh3', C1 = '--dc1', C2 = '--dc2', K1 = '--dk1', K2 = '--dk2', T = '--dt', SEP = '--dsep', G = '--dg';
   const card = (left: number, top: number, w: number, h: number, vTop: string, vAlt: string, extra?: CSSProperties) =>
@@ -113,7 +117,8 @@ function Pagina1({ r }: { r: Dados }) {
       <span className="t z26 b c-pet" style={st(mv(387.7, K2), 153.6)}>{r.gerais.qtd}</span>
       <span className="t z7 c-cinza" style={st(mv(401.5, K2), 153.6)}>desde {r.gerais.desde}</span>
 
-      {card(253.3, 327.6, 199.3, 86.4, K1, '--rck')}
+      {/* sem o módulo de acionamentos, o card de acumuladas ocupa o espaço do card de acionamentos */}
+      {card(253.3, 327.6, comAcionamentos ? 199.3 : 309.7, 86.4, K1, '--rck')}
       <span className="t z7 b c-cinza" style={st(mv(343.2, K1), 264.1)}>MENÇÕES AO SICOOB ACUMULADAS</span>
       <span className="t z26 b c-pet" style={st(mv(387.7, K2), 264.1)}>{r.acumulado.qtd}</span>
       <span className="t z7 c-cinza" style={st(mv(401.5, K2), 264.1)}>desde {r.acumulado.desde}</span>
@@ -124,10 +129,12 @@ function Pagina1({ r }: { r: Dados }) {
         </Fragment>
       ))}
 
-      {card(463.4, 327.6, 99.6, 86.4, K1, '--rck')}
-      <span className="t z7 b c-cinza" style={st(mv(343.2, K1), 474.2)}>{'ACIONAMENTOS\nDE IMPRENSA'}</span>
-      <span className="t z26 b c-pet" style={st(mv(387.7, K2), 474.2)}>{nAc}</span>
-      <span className="t z7 c-cinza" style={st(mv(401.5, K2), 474.2)}>{r.acionamentos.linhas.length ? `novos · ${r.acionamentos.abertos} em aberto` : 'no período'}</span>
+      {comAcionamentos && <>
+        {card(463.4, 327.6, 99.6, 86.4, K1, '--rck')}
+        <span className="t z7 b c-cinza" style={st(mv(343.2, K1), 474.2)}>{'ACIONAMENTOS\nDE IMPRENSA'}</span>
+        <span className="t z26 b c-pet" style={st(mv(387.7, K2), 474.2)}>{nAc}</span>
+        <span className="t z7 c-cinza" style={st(mv(401.5, K2), 474.2)}>{r.acionamentos.linhas.length ? `novos · ${r.acionamentos.abertos} em aberto` : 'no período'}</span>
+      </>}
 
       {/* o que mudou (tamanho controlado pelo AjustePagina1) */}
       <div className="col-esq" style={{ top: mv(432.45, T) }}>
@@ -198,15 +205,17 @@ function legendaTimeline() {
   );
 }
 
-function Pagina2({ r, linha }: { r: Dados; linha: string }) {
+function Pagina2({ r, linha, timeline, acionamentos }: { r: Dados; linha: string; timeline: boolean; acionamentos: boolean }) {
   const S1 = 'Linha do tempo das menções', S2 = 'Acionamentos de imprensa';
-  const blocos: Bloco[] = [
+  const blocosTimeline: Bloco[] = [
     { id: 'h-tl', no: <div className="h2">{S1}</div>, manterComProximo: true, secao: S1, inicioSecao: true },
     { id: 'leg', no: legendaTimeline(), manterComProximo: true, secao: S1 },
     ...(r.timeline.length
       ? r.timeline.map((item, i) => ({ id: `tl${i}`, no: <LinhaTimeline item={item} />, grupo: 'tl' as const, secao: S1 }))
       : [{ id: 'tl-vazio', no: <p className="nota">Nenhum item marcado com “Mostrar Timeline? = SIM”.</p>, secao: S1 }]),
-    { id: 'h-ac', no: <div className="h2 secao2">{S2}</div>, manterComProximo: true, secao: S2, inicioSecao: true },
+  ];
+  const blocosAcionamentos: Bloco[] = [
+    { id: 'h-ac', no: <div className={`h2${timeline ? ' secao2' : ''}`}>{S2}</div>, manterComProximo: true, secao: S2, inicioSecao: true },
     ...(r.acionamentos.linhas.length
       ? r.acionamentos.linhas.map((a, i) => ({
           id: `ac${i}`, grupo: 'tab' as const, secao: S2,
@@ -215,10 +224,12 @@ function Pagina2({ r, linha }: { r: Dados; linha: string }) {
       : [{ id: 'ac-vazio', no: <p className="nota">Nenhum acionamento no período.</p>, secao: S2 }]),
     ...(r.leitura ? [{ id: 'leitura', secao: S2, no: <div className="leitura"><b>LEITURA</b><span>{rico(r.leitura)}</span></div> }] : []),
   ];
+  const blocos = [...(timeline ? blocosTimeline : []), ...(acionamentos ? blocosAcionamentos : [])];
+  const titulo = timeline && acionamentos ? 'EVOLUÇÃO · ACIONAMENTOS' : timeline ? 'EVOLUÇÃO' : 'ACIONAMENTOS DE IMPRENSA';
   return (
     <Paginador
-      nome="Evolução e acionamentos"
-      moldura={<><CabecalhoInterno titulo="EVOLUÇÃO · ACIONAMENTOS" linha={linha} /><Rodape /></>}
+      nome={timeline && acionamentos ? 'Evolução e acionamentos' : timeline ? 'Linha do tempo' : 'Acionamentos de imprensa'}
+      moldura={<><CabecalhoInterno titulo={titulo} linha={linha} /><Rodape /></>}
       blocos={blocos}
       tabela={{
         colgroup: <colgroup><col style={{ width: '44.6pt' }} /><col style={{ width: '100.8pt' }} /><col style={{ width: '100.8pt' }} /><col style={{ width: '223.4pt' }} /><col style={{ width: '61pt' }} /></colgroup>,
@@ -230,10 +241,10 @@ function Pagina2({ r, linha }: { r: Dados; linha: string }) {
 
 /* ============================== página 3 ============================== */
 
-function Pagina3({ r, linha }: { r: Dados; linha: string }) {
+function Pagina3({ r, linha, contexto, gatilhos }: { r: Dados; linha: string; contexto: boolean; gatilhos: boolean }) {
   const a = r.analise;
   const S1 = 'Análise do caso', S2 = 'Gatilhos de escalada';
-  const blocos: Bloco[] = [
+  const blocosContexto: Bloco[] = [
     { id: 'h', no: <div className="h2">{S1}</div>, manterComProximo: true, secao: S1, inicioSecao: true },
     { id: 'ref', no: <p className="ref">{`Texto de referência: escrito na abertura do caso e revisado só quando o papel do Sicoob mudar.  ${a.revisao.trim() ? `  Última revisão: ${a.revisao.trim()}.` : ''}`}</p>, secao: S1 },
     { id: 'man', no: <p className="manchete">{rico(vazio(a.manchete, '[Mensagem principal sobre a posição do Sicoob no caso]'))}</p>, secao: S1 },
@@ -245,15 +256,18 @@ function Pagina3({ r, linha }: { r: Dados; linha: string }) {
         </div>
       ),
     },
+  ];
+  const blocosGatilhos: Bloco[] = [
     { id: 'h-gat', no: <div className="rot pet">{S2}</div>, manterComProximo: true, secao: S2, inicioSecao: true },
     ...(a.gatilhos.length
       ? a.gatilhos.map((g, i) => ({ id: `g${i}`, grupo: 'ul' as const, secao: S2, no: <>{rico(g)}</> }))
       : [{ id: 'g-vazio', secao: S2, no: <p className="nota">Nenhum gatilho cadastrado.</p> }]),
   ];
+  const blocos = [...(contexto ? blocosContexto : []), ...(gatilhos ? blocosGatilhos : [])];
   return (
     <Paginador
       nome="Contexto do caso"
-      moldura={<><CabecalhoInterno titulo="CONTEXTO DO CASO" linha={linha} /><Rodape /></>}
+      moldura={<><CabecalhoInterno titulo={contexto ? 'CONTEXTO DO CASO' : 'GATILHOS DE ESCALADA'} linha={linha} /><Rodape /></>}
       blocos={blocos}
     />
   );
@@ -262,13 +276,19 @@ function Pagina3({ r, linha }: { r: Dados; linha: string }) {
 /* ============================== documento ============================== */
 
 export default function Relatorio({ r, planilha }: { r: Dados; planilha: string }) {
+  const m = useModulos().selecao;
   const linha = `${vazio(r.titulo, '[Título]')} · ${vazio(r.unidade, '[Unidade]')} · EDIÇÃO DE ${vazio(r.ultimaAtualizacao)}`.toUpperCase();
   return (
     <>
       <Pagina1 r={r} />
-      <Pagina2 r={r} linha={linha} />
-      <Pagina3 r={r} linha={linha} />
-      {r.clippings.map((c, i) => (
+      {/* a chave remonta o Paginador quando os módulos mudam (a paginação é refeita do zero) */}
+      {(m.timeline || m.acionamentos) && (
+        <Pagina2 key={`p2-${m.timeline}-${m.acionamentos}`} r={r} linha={linha} timeline={m.timeline} acionamentos={m.acionamentos} />
+      )}
+      {(m.contexto || m.gatilhos) && (
+        <Pagina3 key={`p3-${m.contexto}-${m.gatilhos}`} r={r} linha={linha} contexto={m.contexto} gatilhos={m.gatilhos} />
+      )}
+      {m.anexos && r.clippings.map((c, i) => (
         <Anexo key={c.idUnico} clip={c} indice={i} total={r.clippings.length} linha={linha} protagonismo={r.protagonismo} planilha={planilha} />
       ))}
     </>

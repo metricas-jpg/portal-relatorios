@@ -90,6 +90,16 @@ Em qualquer texto, `**trecho**` sai em negrito.
 
 **Nome do PDF.** O título da aba do gerador vira o nome sugerido ao "Salvar como PDF" e o título dentro do arquivo, no padrão da pasta do portal: `DD.MM.AAAA_TURNO_Título_Unidade` (ex.: `21.10.2026_TARDE_Apex_Sicoob-ES`). Data e turno vêm da `ultima_atualizacao` + `hora_atualizacao` da edição (manhã até 11h59, tarde até 17h59, noite depois; sem hora, o turno fica de fora). Na 1ª edição, o turno é substituído por `ABERTURA`; o título é o `titulo_crise` (ou o NOME da planilha central) e a unidade é o `subtitulo_unidade`.
 
+### Montar relatório (módulos)
+
+No gerador, o painel **Montar relatório** liga e desliga partes do relatório: Linha do tempo, Acionamentos de imprensa, Contexto do caso, Gatilhos de escalada e Anexos. A página 1 é fixa. A prévia muda na hora e o painel não sai no PDF.
+
+- **Padrão:** tudo ligado, menos o que não tem dados na edição.
+- **Coerência:** sem Acionamentos, o card da página 1 sai e o de menções acumuladas ocupa o espaço. Avisos do painel amarelo de partes desligadas não aparecem.
+- **Escolha compartilhada, por planilha e edição:** quem mudar salva para a equipe toda. Edição sem escolha própria herda a da edição anterior mais próxima. O painel mostra de onde veio a escolha (edição, pessoa e horário).
+- **Armazenamento:** Redis da Upstash pela Vercel Marketplace (plano gratuito; cada planilha ocupa poucos bytes). Variáveis `KV_REST_API_URL` e `KV_REST_API_TOKEN` (ou `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`), criadas pela integração. Sem elas, a escolha fica só no navegador de quem gerou e o painel avisa.
+- Código: `lib/modulos.ts` (módulos e regras), `lib/kv.ts` (armazenamento), `app/api/modulos` (leitura e gravação), `app/gerador/Modulos.tsx` (painel).
+
 ### Prints dos anexos (COLUNA PRINT)
 
 O arquivo do Drive (PDF, PNG ou JPG) é convertido em imagem no navegador e aparece igual na tela e no PDF final, sem a barra do leitor de PDF. O conteúdo é mostrado **inteiro**: as páginas do arquivo são emendadas numa faixa contínua, sem as margens brancas, e cortadas no tamanho da área de print. O começo fica na página do anexo e o restante segue em páginas de continuação ("Parte 2 de 5"...). O corte procura um espaço em branco para não partir uma linha de texto. Cabeçalho e rodapé que o navegador imprime nos PDFs (data, endereço, "1/2") são descartados, e uma sobra pequena no fim entra na página anterior em vez de virar uma página própria. Para a tela não ficar pesada, cada print só é carregado quando o anexo chega perto da área visível, no máximo 2 ao mesmo tempo. O botão **Gerar Relatório Final** carrega os que faltam e espera todos terminarem antes de abrir a impressão. O conversor de PDF (pdf.js 3.11.174) é carregado do cdnjs.
