@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { avisarRelatorio } from './avisos-cliente';
+import { useModulos } from './Modulos';
+import { moduloDoAviso } from '@/lib/modulos';
 
 /**
  * Painel amarelo (não sai na impressão) com:
@@ -26,7 +28,9 @@ export default function PainelAvisos({ avisos }: { avisos: string[] }) {
     return () => window.removeEventListener('relatorio-aviso', atualizar);
   }, []);
 
-  const todos = [...avisos, ...cliente];
+  // avisos de módulos desligados não aparecem (aquela parte não vai para o PDF)
+  const { ligado } = useModulos();
+  const todos = [...avisos, ...cliente].filter(a => { const m = moduloDoAviso(a); return !m || ligado(m); });
   if (!todos.length) return null;
   return (
     <div className="print-hidden w-full max-w-[595pt] bg-[#FFF6CC] border border-[#E8D277] text-[#6B5300] p-5 rounded-xl shadow-sm">

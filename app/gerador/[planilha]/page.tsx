@@ -10,6 +10,8 @@ import PrintController from '../PrintController';
 import PainelAvisos from '../PainelAvisos';
 import Relatorio from '../Relatorio';
 import SeletorEdicao from '../SeletorEdicao';
+import { ModulosProvider, PainelModulos } from '../Modulos';
+import { contagens } from '@/lib/modulos';
 import { AcessoRestrito, AvisoErro, TelaSelecao } from '../Moldura';
 import '../gerador.css';
 
@@ -81,6 +83,7 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
   const atual = eds.find(e => e.numero === numero)!;
 
   return (
+    <ModulosProvider planilha={planilha} edicao={atual.numero} contagem={contagens(r)}>
     <div className="doc">
       {/* barra de controle (não sai na impressão) */}
       <header className="print-hidden w-full max-w-[595pt] bg-[#003641] text-white p-4 rounded-xl shadow-lg flex flex-col gap-3">
@@ -102,9 +105,12 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
         )}
       </header>
 
+      <PainelModulos edicao={atual.numero} />
+
       <PainelAvisos avisos={r.avisos} />
 
       <Relatorio r={r} planilha={planilha} />
     </div>
+    </ModulosProvider>
   );
 }
