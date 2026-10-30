@@ -126,7 +126,7 @@ export interface Acionamento { data: string; veiculo: string; jornalista: string
 
 export interface Relatorio {
   orgao: string; titulo: string; unidade: string;
-  /** início = Data Coleta mais antiga (de todas as edições); atualizadoEm = Data Coleta mais recente até a edição */
+  /** linha de datas da página 1: inicio_monitoramento e ultima_atualizacao + hora_atualizacao da edição */
   inicio: string; edicao: string; atualizadoEm: string;
   /** ultima_atualizacao de Configuracoes_Gerais: data da edição (cabeçalho interno e nome do PDF) */
   ultimaAtualizacao: string;
@@ -249,24 +249,18 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   });
   const regs = todos.filter(r => ate(r.ed));
 
-  // ---------- início e última atualização da linha de datas: pelas Datas Coleta ----------
-  // início = coleta mais antiga de todo o monitoramento (qualquer edição);
-  // última atualização = coleta mais recente até a edição escolhida
-  const dataCompleta = (d: DataLida) => `${ddmm(d)}/${d.ano}`;
-  const horaDe = (t: string) => { const h = formatarDataHora(t).match(/,\s*(\d{2}h\d*)$/); return h ? `, ${h[1]}` : ''; };
-  const maisAntiga = todos.filter(r => r.dColeta).sort((a, b) => a.dColeta!.ts - b.dColeta!.ts)[0];
-  const coletaRecente = regs.filter(r => r.dColeta).sort((a, b) => b.dColeta!.ts - a.dColeta!.ts)[0];
-  const refInicio = maisAntiga?.dColeta || lerData(inicioMon, refUltima);
-  const inicio = refInicio ? dataCompleta(refInicio) : inicioMon.split(',')[0].trim();
-  const desde = refInicio ? ddmm(refInicio) : inicioMon;
-  let atualizadoEm = ultima;
-  if (coletaRecente) {
-    const d = coletaRecente.dColeta!;
-    // a hora vem da própria Data Coleta; sem ela, da ultima_atualizacao, se for o mesmo dia
-    const hora = horaDe(coletaRecente.dataColeta) || (refUltima && chaveDia(refUltima) === chaveDia(d) ? horaDe(ultima) : '');
-    atualizadoEm = dataCompleta(d) + hora;
+  // ---------- linha de datas da página 1: vem de Configuracoes_Gerais (edição escolhida) ----------
+  // início = inicio_monitoramento (só a data); última atualização = ultima_atualizacao + hora_atualizacao
+  // (já juntas na leitura da planilha). As datas do Registro_Central não entram aqui.
+  const inicio = (inicioMon.split(',')[0] || '').trim().split(/\s+/)[0] || '';
+  const atualizadoEm = ultima;
+  if (ultima && !(geral.hora_atualizacao || '').trim() && !/,\s*\d{2}h/.test(ultima)) {
+    avisos.push('Configuracoes_Gerais: hora_atualizacao vazia nesta edição; a última atualização aparece sem hora e o nome do PDF fica sem turno.');
   }
-  if (!maisAntiga) avisos.push('Registro_Central: nenhuma Data Coleta válida (DD/MM/AAAA); o início e a última atualização vieram de Configuracoes_Gerais.');
+  // "desde" dos cards de menções: primeira Data Coleta do monitoramento (todas as edições); sem ela, o início
+  const maisAntiga = todos.filter(r => r.dColeta).sort((a, b) => a.dColeta!.ts - b.dColeta!.ts)[0];
+  const refDesde = maisAntiga?.dColeta || lerData(inicioMon, refUltima);
+  const desde = refDesde ? ddmm(refDesde) : inicio;
   const publicacoes = regs.filter(r => r.rede);
   const doSicoob = publicacoes.filter(r => r.envolveSicoob);
   const vol = (r: RegistroCentral) => r.volume || 1;
