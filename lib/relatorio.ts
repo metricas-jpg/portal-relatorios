@@ -126,7 +126,7 @@ export interface Acionamento { data: string; veiculo: string; jornalista: string
 
 export interface Relatorio {
   orgao: string; titulo: string; unidade: string;
-  /** linha de datas da página 1: inicio_monitoramento e ultima_atualizacao + hora_atualizacao da edição */
+  /** linha de datas da página 1: 1º inicio_monitoramento do caso e ultima_atualizacao + hora_atualizacao da edição */
   inicio: string; edicao: string; atualizadoEm: string;
   /** ultima_atualizacao de Configuracoes_Gerais: data da edição (cabeçalho interno e nome do PDF) */
   ultimaAtualizacao: string;
@@ -252,7 +252,11 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   // ---------- linha de datas da página 1: vem de Configuracoes_Gerais (edição escolhida) ----------
   // início = inicio_monitoramento (só a data); última atualização = ultima_atualizacao + hora_atualizacao
   // (já juntas na leitura da planilha). As datas do Registro_Central não entram aqui.
-  const inicio = (inicioMon.split(',')[0] || '').trim().split(/\s+/)[0] || '';
+  // o início é o do caso: a primeira data preenchida em inicio_monitoramento (edição mais antiga),
+  // igual em todas as edições
+  const primeiroInicio = [...edicoes].sort((x, y) => x.numero - y.numero)
+    .map(e => (e.dados.inicio_monitoramento || '').trim()).find(Boolean) || inicioMon;
+  const inicio = (formatarDataHora(primeiroInicio).split(',')[0] || '').trim().split(/\s+/)[0] || '';
   const atualizadoEm = ultima;
   if (ultima && !(geral.hora_atualizacao || '').trim() && !/,\s*\d{2}h/.test(ultima)) {
     avisos.push('Configuracoes_Gerais: hora_atualizacao vazia nesta edição; a última atualização aparece sem hora e o nome do PDF fica sem turno.');
