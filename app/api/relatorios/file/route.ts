@@ -78,6 +78,14 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
+    // Drive responde 404 (ou 403) quando a conta de serviço não tem acesso ao arquivo
+    const status = (error as { code?: number; status?: number }).code ?? (error as { status?: number }).status;
+    if (status === 404 || status === 403) {
+      return NextResponse.json(
+        { error: 'sem-acesso', conta: process.env.GOOGLE_CLIENT_EMAIL || '' },
+        { status: 403 },
+      );
+    }
     console.error('Erro na rota de arquivo:', error);
     return NextResponse.json({ error: 'Falha ao processar arquivo' }, { status: 500 });
   }
