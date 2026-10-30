@@ -108,6 +108,11 @@ export default function Anexo({ clip, indice, total, linha, protagonismo, planil
         const prop = (el: HTMLElement) => (el.clientHeight - 4) / el.clientWidth;
         const f = await naFila(async () => {
           const res = await fetch(`/api/relatorios/file?id=${id}&download=true&planilha=${encodeURIComponent(planilha)}`);
+          if (res.status === 403) {
+            // a conta do site não enxerga o arquivo no Drive: a pasta dos prints não foi compartilhada com ela
+            const { conta } = await res.json().catch(() => ({ conta: '' }));
+            throw new Error(`o site não tem acesso ao arquivo no Drive. Compartilhe a pasta dos prints com ${conta || 'a conta de serviço do site'} (Leitor)`);
+          }
           if (!res.ok) throw new Error(res.status === 404 ? 'arquivo não encontrado ou fora das planilhas do portal' : `o servidor respondeu ${res.status}`);
           const blob = await res.blob();
           if (!blob.type.startsWith('image/') && blob.type !== 'application/pdf') throw new Error(`formato não suportado (${blob.type || 'desconhecido'}); use PDF, PNG ou JPG`);
