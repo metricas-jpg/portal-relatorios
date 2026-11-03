@@ -97,11 +97,13 @@
 */
 .doc #p1 {
   --dh1: 0pt; --dh2: 0pt; --dh3: 0pt; --rbg: 0pt;          /* cabeçalho */
-  /* os cards de risco e status têm 26pt a mais (escala embaixo do texto): o que vem depois desce
-     26pt e as barras do gráfico encolhem o mesmo tanto (ver ESCALA em AjustePagina1) */
-  --dc1: 0pt; --dc2: 0pt; --rcr: -26pt;                    /* cards de risco e status */
-  --dk1: 26pt; --dk2: 26pt; --rck: 0pt;                    /* cards de indicadores */
-  --dt: 26pt; --dsep: 26pt; --dg: 26pt; --altmax: 95.2pt;  /* textos e gráfico */
+  /* --escala: altura extra dos cards de risco e status (escala embaixo do texto), definida na
+     própria página 1: 26pt com texto, 3,3pt quando risco_texto e status_texto estão vazios.
+     O que vem depois desce esse tanto e as barras do gráfico encolhem o mesmo (ver AjustePagina1) */
+  --escala: 26pt;
+  --dc1: 0pt; --dc2: 0pt; --rcr: calc(0pt - var(--escala)); /* cards de risco e status */
+  --dk1: var(--escala); --dk2: var(--escala); --rck: 0pt;   /* cards de indicadores */
+  --dt: var(--escala); --dsep: var(--escala); --dg: var(--escala); --altmax: calc(121.2pt - var(--escala)); /* textos e gráfico */
 }
 
 /* coluna esquerda das seções "O que mudou" / "O que significa" (página 1) */

@@ -20,9 +20,9 @@ import { avisarRelatorio } from './avisos-cliente';
 const LINHA = 11.9;            // pt, entrelinha dos dois textos
 const LINHAS_EXTRA = 8;        // limite absoluto, somando os dois textos
 const MAX_CAB = 30, MAX_CARDS = 28, MAX_GRAF = 37.2; // pt (30 + 28 + 37,2 = 95,2 = 8 linhas)
-// altura extra dos cards de risco e status (escala sob o texto): tudo abaixo desce isso e as
-// barras do gráfico perdem o mesmo tanto (valores iniciais em gerador.css)
-const ESCALA = 26;
+// altura extra dos cards de risco e status (escala sob o texto), lida de data-escala da página 1:
+// tudo abaixo desce isso e as barras do gráfico perdem o mesmo tanto (valores iniciais em gerador.css)
+const ESCALA_PADRAO = 26;
 
 export default function AjustePagina1() {
   useEffect(() => {
@@ -41,6 +41,7 @@ export default function AjustePagina1() {
         avisarRelatorio(`Página 1 · “${el.dataset.encaixe}” não coube mesmo em 2 linhas e com fonte menor; foi cortado. Encurte o texto na planilha.`);
       });
 
+      const ESCALA = Number(pagina.dataset.escala) || ESCALA_PADRAO;
       const els = [...pagina.querySelectorAll<HTMLElement>('[data-elastico]')];
       if (els.length !== 2) return;
 
