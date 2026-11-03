@@ -92,6 +92,16 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
             <Link href="/gerador" className="text-sm text-slate-300 hover:text-white whitespace-nowrap">← Relatórios</Link>
             <div className="h-6 w-px bg-white/20" />
             <span className="font-bold truncate" title={monitoramento.nome}>{monitoramento.nome}</span>
+            {/* planilha de origem: para corrigir os dados sem procurar no Drive */}
+            <a
+              href={`https://docs.google.com/spreadsheets/d/${planilha}/edit`} target="_blank" rel="noopener noreferrer"
+              title="Abrir a planilha deste relatório numa nova aba"
+              className="shrink-0 inline-flex items-center gap-1.5 text-xs text-[#C9D200] hover:text-white border border-[#C9D200]/40 hover:border-white/60 rounded-md px-2 py-1 transition"
+            >
+              <svg aria-hidden="true" className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2" /><path d="M3 9h18M3 15h18M9 3v18" strokeWidth="2" /></svg>
+              Abrir planilha
+              <span aria-hidden="true">↗</span>
+            </a>
           </div>
           <PrintController totalAnexos={r.clippings.filter(c => c.printUrl).length} nomeArquivo={nomeArquivo(r, monitoramento.nome)} />
         </div>
