@@ -98,13 +98,16 @@ function Pagina1({ r }: { r: Dados }) {
   const legGrafico = [[32.4, 43.9], [102.2, 113.8], [176.8, 188.3], [251.3, 262.8], [321.1, 332.6], [391, 402.5], [460.8, 472.3]] as const;
   const nAc = r.acionamentos.novos;
   const comAcionamentos = useModulos().ligado('acionamentos');
+  // sem risco_texto e sem status_texto, a escala sobe para o lugar do texto e os cards encolhem
+  const semTexto = !r.risco.texto.trim() && !r.status.texto.trim();
+  const SOBE = semTexto ? 22.7 : 0, escala = 26 - SOBE;
   // deslocamentos da página elástica (ver gerador.css e AjustePagina1)
   const H1 = '--dh1', H2 = '--dh2', H3 = '--dh3', C1 = '--dc1', C2 = '--dc2', K1 = '--dk1', K2 = '--dk2', T = '--dt', SEP = '--dsep', G = '--dg';
   const card = (left: number, top: number, w: number, h: number, vTop: string, vAlt: string, extra?: CSSProperties) =>
     <div className="card" style={{ left: `${left}pt`, top: mv(top, vTop), width: `${w}pt`, height: mv(h, vAlt, '-'), ...extra }} />;
 
   return (
-    <section className="page" id="p1">
+    <section className="page" id="p1" data-escala={escala} style={{ '--escala': `${escala}pt` } as CSSProperties}>
       <AjustePagina1 />
       <div className="bg" style={{ height: mv(205.2, '--rbg', '-') }} />
       <span className="t z10 c-branco lim" data-limite="Área responsável (titulo_orgao)" style={st(mv(31.6, H1), 32.4, { ...lim(2, 370), textTransform: 'uppercase' })}>{r.orgao}</span>
@@ -121,16 +124,16 @@ function Pagina1({ r }: { r: Dados }) {
       {/* risco e status */}
       {card(32.4, 219.6, 258.1, 95, C1, '--rcr')}
       <span className="t z75 b sp c-cinza" style={st(mv(238.6, C1), 46.8)}>RISCO PARA A INSTITUIÇÃO</span>
-      <div className="div-escala" style={{ left: '46.8pt', top: mv(306.2, C2) }} />
-      <Escala nome="risco" itens={ESCALA_RISCO} atual={r.risco.nivel} cor={r.risco.cor} top={mv(316.1, C2)} left={46.8} />
+      <div className="div-escala" style={{ left: '46.8pt', top: mv(306.2 - SOBE, C2) }} />
+      <Escala nome="risco" itens={ESCALA_RISCO} atual={r.risco.nivel} cor={r.risco.cor} top={mv(316.1 - SOBE, C2)} left={46.8} />
       <span className="t z75 b c-cinza r" style={st(mv(238.6, C1), undefined, { right: 'calc(var(--W) - 276.1pt)' })}>{tendencia(r.risco.tendencia)}</span>
       <span className="t z26 b lim1" data-limite="Nível de risco" style={st(mv(273.5, C2), 46.8, { color: r.risco.cor, width: '229.3pt' })}>{r.risco.nivel}</span>
       <span className="t wrap z8 c-cinza lim" data-limite="Texto do risco (risco_texto)" style={st(mv(290.9, C2), 46.8, lim(2, 229.3))}>{r.risco.texto}</span>
 
       {card(304.9, 219.6, 258.1, 95, C1, '--rcr')}
       <span className="t z75 b sp c-cinza" style={st(mv(238.6, C1), 319.3)}>STATUS DA CRISE</span>
-      <div className="div-escala" style={{ left: '319.3pt', top: mv(306.2, C2) }} />
-      <Escala nome="status" itens={ESCALA_STATUS} atual={r.status.nivel} cor="var(--roxo)" top={mv(316.1, C2)} left={319.3} />
+      <div className="div-escala" style={{ left: '319.3pt', top: mv(306.2 - SOBE, C2) }} />
+      <Escala nome="status" itens={ESCALA_STATUS} atual={r.status.nivel} cor="var(--roxo)" top={mv(316.1 - SOBE, C2)} left={319.3} />
       <span className="t z75 b c-cinza r" style={st(mv(238.6, C1), undefined, { right: 'calc(var(--W) - 548.7pt)' })}>{tendencia(r.status.tendencia)}</span>
       <span className="t z19 b c-roxo lim1" data-limite="Status da crise" style={st(mv(270.7, C2), 319.3, { width: '229.3pt' })}>{vazio(r.status.nivel.toUpperCase(), '[STATUS]')}</span>
       <span className="t wrap z8 c-cinza lim" data-limite="Texto do status (status_texto)" style={st(mv(290.9, C2), 319.3, lim(2, 229.3))}>{r.status.texto}</span>
