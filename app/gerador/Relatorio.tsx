@@ -6,9 +6,43 @@ import Anexo from './Anexo';
 import { st, mv, lim, rico, vazio, tendencia, Rodape, CabecalhoInterno } from './comum';
 import AjustePagina1 from './AjustePagina1';
 import { useModulos } from './Modulos';
-import { REDES, type Relatorio as Dados, type ItemTimeline, type Tom } from '@/lib/relatorio';
+import { REDES, normalizar, type Relatorio as Dados, type ItemTimeline, type Tom } from '@/lib/relatorio';
 
 /* ============================== página 1 ============================== */
+
+/**
+ * Escalas de risco e status, mostradas sob o texto de cada card. O nível atual fica destacado
+ * na cor do card. Textos fixos (a régua é a mesma em todos os relatórios).
+ */
+const ESCALA_RISCO: [string, string][] = [
+  ['Baixo', 'Sicoob ausente ou citado de passagem; semanal'],
+  ['Médio', 'parte do fato ou acionado; diário'],
+  ['Alto', 'ato de autoridade, tom negativo ou grande alcance; várias vezes ao dia'],
+];
+const ESCALA_STATUS: [string, string][] = [
+  ['Sinais', 'indícios, sem fato com o Sicoob'],
+  ['Fase aguda', 'fato em curso, pressão subindo'],
+  ['Em desdobramento', 'pico passou, há marcos à frente'],
+  ['Controlado', 'sem fatos nem marcos próximos'],
+  ['Encerrado', 'sem pendências'],
+];
+
+function Escala({ itens, atual, cor, top, left, nome }: { itens: [string, string][]; atual: string; cor: string; top: string; left: number; nome: string }) {
+  const n = normalizar(atual);
+  return (
+    <span className="t wrap z65 c-cinza lim escala" data-limite={`Escala de ${nome}`} style={st(top, left, lim(3, 229.3))}>
+      {itens.map(([rotulo, texto], i) => {
+        const ativo = !!n && normalizar(rotulo) === n;
+        return (
+          <Fragment key={rotulo}>
+            {i > 0 && '  ·  '}
+            <b style={{ color: ativo ? cor : 'var(--texto)' }}>{rotulo}:</b> {texto}
+          </Fragment>
+        );
+      })}
+    </span>
+  );
+}
 
 function Grafico({ r }: { r: Dados }) {
   const dias = r.grafico;
@@ -87,12 +121,16 @@ function Pagina1({ r }: { r: Dados }) {
       {/* risco e status */}
       {card(32.4, 219.6, 258.1, 95, C1, '--rcr')}
       <span className="t z75 b sp c-cinza" style={st(mv(238.6, C1), 46.8)}>RISCO PARA A INSTITUIÇÃO</span>
+      <div className="div-escala" style={{ left: '46.8pt', top: mv(306.2, C2) }} />
+      <Escala nome="risco" itens={ESCALA_RISCO} atual={r.risco.nivel} cor={r.risco.cor} top={mv(316.1, C2)} left={46.8} />
       <span className="t z75 b c-cinza r" style={st(mv(238.6, C1), undefined, { right: 'calc(var(--W) - 276.1pt)' })}>{tendencia(r.risco.tendencia)}</span>
       <span className="t z26 b lim1" data-limite="Nível de risco" style={st(mv(273.5, C2), 46.8, { color: r.risco.cor, width: '229.3pt' })}>{r.risco.nivel}</span>
       <span className="t wrap z8 c-cinza lim" data-limite="Texto do risco (risco_texto)" style={st(mv(290.9, C2), 46.8, lim(2, 229.3))}>{r.risco.texto}</span>
 
       {card(304.9, 219.6, 258.1, 95, C1, '--rcr')}
       <span className="t z75 b sp c-cinza" style={st(mv(238.6, C1), 319.3)}>STATUS DA CRISE</span>
+      <div className="div-escala" style={{ left: '319.3pt', top: mv(306.2, C2) }} />
+      <Escala nome="status" itens={ESCALA_STATUS} atual={r.status.nivel} cor="var(--roxo)" top={mv(316.1, C2)} left={319.3} />
       <span className="t z75 b c-cinza r" style={st(mv(238.6, C1), undefined, { right: 'calc(var(--W) - 548.7pt)' })}>{tendencia(r.status.tendencia)}</span>
       <span className="t z19 b c-roxo lim1" data-limite="Status da crise" style={st(mv(270.7, C2), 319.3, { width: '229.3pt' })}>{vazio(r.status.nivel.toUpperCase(), '[STATUS]')}</span>
       <span className="t wrap z8 c-cinza lim" data-limite="Texto do status (status_texto)" style={st(mv(290.9, C2), 319.3, lim(2, 229.3))}>{r.status.texto}</span>
@@ -162,7 +200,7 @@ function Pagina1({ r }: { r: Dados }) {
       ))}
       <Grafico r={r} />
 
-      <span className="t wrap z7 c-cinza" style={st(783.1, 32.4, { width: '531pt' })}><b>Legenda.</b>  Risco (define a frequência de monitoramento): Baixo · Médio · Alto.  Status: Sinais · Fase aguda · Em desdobramento · Controlado · Encerrado.  Protagonismo: Protagonista · Parte envolvida · Citação incidental · Sem menção.</span>
+      <span className="t wrap z7 c-cinza" style={st(783.1, 32.4, { width: '531pt' })}><b>Legenda.</b>  Risco define a frequência de monitoramento.  Protagonismo: Protagonista · Parte envolvida · Citação incidental · Sem menção.</span>
       <Rodape />
     </section>
   );

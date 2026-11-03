@@ -20,6 +20,9 @@ import { avisarRelatorio } from './avisos-cliente';
 const LINHA = 11.9;            // pt, entrelinha dos dois textos
 const LINHAS_EXTRA = 8;        // limite absoluto, somando os dois textos
 const MAX_CAB = 30, MAX_CARDS = 28, MAX_GRAF = 37.2; // pt (30 + 28 + 37,2 = 95,2 = 8 linhas)
+// altura extra dos cards de risco e status (escala sob o texto): tudo abaixo desce isso e as
+// barras do gráfico perdem o mesmo tanto (valores iniciais em gerador.css)
+const ESCALA = 26;
 
 export default function AjustePagina1() {
   useEffect(() => {
@@ -77,10 +80,10 @@ export default function AjustePagina1() {
         // cabeçalho: menos respiro no topo, entre a linha amarela e o título, antes e depois da linha de datas
         '--dh1': v(-ga * 4 / 30), '--dh2': v(-ga * 12 / 30), '--dh3': v(-ga * 22 / 30), '--rbg': v(ga),
         // cards: menos espaço acima, dentro e entre eles
-        '--dc1': v(-(ga + gb * 4.4 / 28)), '--dc2': v(-(ga + gb * 8.4 / 28)), '--rcr': v(gb * 8 / 28),
-        '--dk1': v(-(ga + gb * 15.4 / 28)), '--dk2': v(-(ga + gb * 18.4 / 28)), '--rck': v(gb * 6 / 28),
+        '--dc1': v(-(ga + gb * 4.4 / 28)), '--dc2': v(-(ga + gb * 8.4 / 28)), '--rcr': v(gb * 8 / 28 - ESCALA),
+        '--dk1': v(ESCALA - (ga + gb * 15.4 / 28)), '--dk2': v(ESCALA - (ga + gb * 18.4 / 28)), '--rck': v(gb * 6 / 28),
         // textos começam mais acima; o gráfico desce só o que as barras encolhem
-        '--dt': v(-(ga + gb)), '--dsep': v(-(ga + gb) + extra[0] * LINHA), '--dg': v(gc), '--altmax': v(121.2 - gc),
+        '--dt': v(ESCALA - (ga + gb)), '--dsep': v(ESCALA - (ga + gb) + extra[0] * LINHA), '--dg': v(ESCALA + gc), '--altmax': v(121.2 - ESCALA - gc),
       };
       Object.entries(vars).forEach(([k, val]) => pagina.style.setProperty(k, val));
       dados.forEach((d, i) => d.el.style.setProperty('--linhas', String(d.ideal + extra[i])));
