@@ -293,7 +293,7 @@ function Pagina2({ r, linha, timeline, acionamentos }: { r: Dados; linha: string
       moldura={<><CabecalhoInterno titulo={titulo} linha={linha} /><Rodape /></>}
       blocos={blocos}
       tabela={{
-        colgroup: <colgroup><col style={{ width: '44.6pt' }} /><col style={{ width: '100.8pt' }} /><col style={{ width: '100.8pt' }} /><col style={{ width: '223.4pt' }} /><col style={{ width: '61pt' }} /></colgroup>,
+        colgroup: <colgroup><col style={{ width: '44.6pt' }} /><col style={{ width: '100.8pt' }} /><col style={{ width: '100.8pt' }} /><col style={{ width: '223.4pt' }} /><col /></colgroup>,
         cabecalho: <tr><th>Data</th><th>Veículo</th><th>Jornalista</th><th>Pauta</th><th>Atendido?</th></tr>,
       }}
     />

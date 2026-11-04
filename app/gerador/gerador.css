@@ -163,7 +163,8 @@
 .doc .tl-row.next .txt { font-weight: 700; }
 
 /* tabela de acionamentos */
-.doc .tab { width: 530.6pt; border-collapse: collapse; table-layout: fixed; font: 8pt/9pt var(--font); margin-top: 13.07pt; }
+/* 1pt mais estreita que a área: a borda externa (meio traço para fora da célula) não é cortada pelo overflow da .corpo */
+.doc .tab { width: 529.6pt; border-collapse: collapse; table-layout: fixed; font: 8pt/9pt var(--font); margin-top: 13.07pt; }
 .doc .tab th, .doc .tab td { border: .45pt solid var(--linha); padding: 0 4.3pt; vertical-align: middle; text-align: left; overflow-wrap: anywhere; }
 .doc .tab th { background: var(--petroleo); color: #fff; font-weight: 700; height: 17.7pt; }
 .doc .tab td { height: 26.7pt; color: var(--texto); padding-block: 4pt; }
