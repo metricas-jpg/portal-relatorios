@@ -58,6 +58,7 @@
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--linhas, 1);
   overflow: hidden; white-space: pre-wrap; max-height: calc(var(--lh) * var(--linhas, 1));
 }
+.doc .rot-eixo { position: absolute; width: 40pt; text-align: right; white-space: nowrap; line-height: 1.2; transform-origin: 100% 50%; }
 .doc .div-escala { position: absolute; width: 229.3pt; height: .74pt; background: var(--linha); }
 .doc .escala { --lh: 7.9pt; }
 .doc .escala b { font-weight: 700; }
