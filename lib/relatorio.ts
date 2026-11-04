@@ -333,7 +333,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     if (iVelho > 0 && timeline.slice(0, iVelho).some(t => t.novo && t.tom !== 'next')) timeline[iVelho - 1].divisaoAbaixo = true;
   }
 
-  // ---------- acionamentos: os desta edição + os de edições anteriores ainda em aberto ----------
+  // ---------- acionamentos: todos até a edição escolhida (atendidos ou não), como a linha do tempo ----------
   // Atendido_ou_nao = SIM fecha o acionamento; NÃO ou vazio = em aberto (textos do modelo antigo também valem)
   const sim = (v: string) => ['SIM', 'S', 'TRUE', 'VERDADEIRO'].includes(normalizar(v));
   const atendido = (v: string) => sim(v) || /^(fechad|encerrad|respondid|conclu|finaliz|atendid)/i.test(normalizar(v).toLowerCase());
@@ -348,7 +348,6 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     if (!ate(ed)) return;
     const novo = daEdicao(ed);
     const fechado = atendido(a.atendido);
-    if (!novo && fechado) return;
     if (!a.atendido.trim()) avisar('Acionamentos_Imprensa', 'Atendido_ou_nao vazio; contado como em aberto', linha);
     if (novo) novosAc++;
     // data completa (20/10/2026) vira dd/mm, como na linha do tempo, para caber na coluna
