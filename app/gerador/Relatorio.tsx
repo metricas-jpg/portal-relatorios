@@ -6,6 +6,7 @@ import Anexo from './Anexo';
 import { st, mv, lim, rico, vazio, tendencia, Rodape, CabecalhoInterno } from './comum';
 import AjustePagina1 from './AjustePagina1';
 import { useModulos } from './Modulos';
+import { avisarRelatorio } from './avisos-cliente';
 import { REDES, normalizar, type Relatorio as Dados, type ItemTimeline, type Tom } from '@/lib/relatorio';
 
 /* ============================== página 1 ============================== */
@@ -44,6 +45,21 @@ function Escala({ itens, atual, cor, top, left, nome }: { itens: [string, string
   );
 }
 
+/**
+ * Como escrever as datas do eixo para TODAS caberem: primeiro deitadas (7,5pt e 7pt); depois
+ * inclinadas cada vez mais (30°, 45°, 60°, 90°); por fim, de pé com fonte menor (até 5pt).
+ * Largura de "DD/MM" ≈ 2,5em (Arimo); inclinadas, o que importa é a distância entre as linhas
+ * paralelas (passo × seno do ângulo), que precisa ser maior que a altura da linha (≈ 1,1em).
+ */
+const OPCOES_ROTULO: [number, number][] = [[0, 7.5], [0, 7], [30, 7], [45, 7], [60, 7], [90, 7], [90, 6.5], [90, 6], [90, 5.5], [90, 5]];
+export function rotuloDoEixo(passo: number): { angulo: number; fonte: number; cabe: boolean } {
+  for (const [angulo, fonte] of OPCOES_ROTULO) {
+    const cabe = angulo === 0 ? passo >= 2.5 * fonte + 3 : passo * Math.sin((angulo * Math.PI) / 180) >= 1.1 * fonte;
+    if (cabe) return { angulo, fonte, cabe };
+  }
+  return { angulo: 90, fonte: 5, cabe: false };
+}
+
 function Grafico({ r }: { r: Dados }) {
   const dias = r.grafico;
   // Geometria do original (pt). A barra mais alta nunca passa de --altmax (121,2pt, menos o que a
@@ -55,7 +71,8 @@ function Grafico({ r }: { r: Dados }) {
   const passo = (X1 - X0) / dias.length;
   const larg = Math.min(LARG_MAX, passo * 0.646);
   const maior = Math.max(...dias.map(d => d.total));
-  const cadaRotulo = Math.max(1, Math.ceil(24 / passo)); // evita datas sobrepostas
+  const rot = rotuloDoEixo(passo);
+  if (!rot.cabe) avisarRelatorio(`Página 1 · gráfico com ${dias.length} dias: mesmo de pé e com fonte mínima, algumas datas do eixo podem se encostar.`);
   const mostrarValor = passo >= 11;
   const caixa = (l: number, t: number | string, w: number, h: number | string, bg: string, key: string) =>
     <div key={key} style={{ position: 'absolute', left: `${l}pt`, top: typeof t === 'number' ? `${t}pt` : t, width: `${w}pt`, height: typeof h === 'number' ? `${h}pt` : h, background: bg }} />;
@@ -81,7 +98,10 @@ function Grafico({ r }: { r: Dados }) {
           <div key={`d${i}`}>
             {barras}
             {mostrarValor && <span className="t c z8 c-texto" style={st(`calc(${BASE - 4.3}pt - ${unid(d.total)})`, cx - 30, { width: '60pt' })}>{d.total}</span>}
-            {i % cadaRotulo === 0 && <span className="t c z75 c-cinza" style={st(755, cx - 30, { width: '60pt' })}>{d.rotulo}</span>}
+            {rot.angulo === 0
+              ? <span className="t c c-cinza" style={st(755, cx - 30, { width: '60pt', '--fs': `${rot.fonte}pt` } as CSSProperties)}>{d.rotulo}</span>
+              // inclinada: o fim do texto fica preso no tracinho do eixo e o texto gira em torno dele
+              : <span className="rot-eixo c-cinza" style={{ left: `${cx - 40}pt`, top: `${BASE + 4.3 + 1.5 - rot.fonte * 0.6}pt`, fontSize: `${rot.fonte}pt`, transform: `rotate(-${rot.angulo}deg)` }}>{d.rotulo}</span>}
           </div>
         );
       })}
