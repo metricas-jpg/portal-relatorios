@@ -576,21 +576,19 @@ function ConteudoHome() {
           )}
         </div>
 
-        {/* Linha de Metadado */}
+        {/* Contador em destaque: número grande com filete turquesa */}
         {!loading && !erro && (
-          <div className="flex items-center justify-between px-2 mb-6 text-xs text-slate-500">
-            <p>
-              {temFiltroAtivo ? (
-                <>
-                  Exibindo <span className="font-bold text-[#003641]">{relatoriosOrdenados.length}</span> de <span className="font-medium text-slate-700">{relatorios.length}</span> relatórios ativos
-                  {busca && <span> para &ldquo;{busca}&rdquo;</span>}
-                </>
-              ) : (
-                <>
-                  <span className="font-bold text-[#003641]">{relatoriosOrdenados.length}</span> relatórios de monitoramento de crises ativos
-                </>
+          <div className="flex items-center gap-3.5 px-2 mb-6" aria-live="polite">
+            <span aria-hidden="true" className="w-1 self-stretch min-h-10 rounded-full bg-[#00AE9D]" />
+            <span className="text-[34px] leading-none font-extrabold text-[#003641] tabular-nums">{relatoriosOrdenados.length}</span>
+            <span className="flex flex-col leading-tight">
+              <span className="text-[15px] font-bold text-[#003641]">Relatórios de crise ativos</span>
+              {temFiltroAtivo && (
+                <span className="text-xs text-slate-500">
+                  de {relatorios.length} no total{busca && <> · busca: &ldquo;{busca}&rdquo;</>}
+                </span>
               )}
-            </p>
+            </span>
           </div>
         )}
 
