@@ -55,7 +55,7 @@ O site só abre planilhas que estão na lista central. A conta de serviço (`GOO
 - **Linha de datas da página 1**: vem de Configuracoes_Gerais, da edição escolhida: `Início do monitoramento` = a primeira data preenchida em `inicio_monitoramento` (a da edição mais antiga; igual em todas as edições, só a data) e `Última atualização` = `ultima_atualizacao` + `hora_atualizacao` (o painel avisa se a hora estiver vazia). As datas do Registro_Central não entram nessa linha. O "desde" dos cards de menções continua sendo a primeira Data Coleta do monitoramento.
 - **Data e hora da edição**: `ultima_atualizacao` (data) + `hora_atualizacao` (hora: `18:00`, `18h`, `18h30`). A edição N cobre o que foi coletado depois da atualização da edição N−1 até a sua. Linhas de Configuracoes_Gerais sem `edicao_numero` e sem `ultima_atualizacao` (só com valores pré-preenchidos) são ignoradas.
 - **`Registro_Central` e `Acionamentos_Imprensa`**: a coluna `edicao_numero` é opcional. Vazia, a linha pertence à primeira edição que fecha depois dela (coleta; se vazia, a do post). Com hora, compara data e hora; sem hora, compara o dia, e se naquele dia fecharem duas edições conta na primeira (o painel avisa). Preenchida, ela vale. Linhas sem data aparecem em todas as edições.
-- **O que entra na edição N**: menções acumuladas, gráfico, linha do tempo e anexos somam tudo até N. "Novas menções" é só da edição N. O gráfico usa a **Data Coleta** no eixo (sem ela, a data do post). Acionamentos: os da edição N e os anteriores ainda em aberto. Na linha do tempo, uma divisória separa as novidades da edição N das edições anteriores.
+- **O que entra na edição N**: menções acumuladas, gráfico, linha do tempo e anexos somam tudo até N. "Novas menções" é só da edição N. O gráfico usa a **Data Coleta** no eixo (sem ela, a data do post). Acionamentos: todos até N, atendidos ou não. Na linha do tempo, uma divisória separa as novidades da edição N das edições anteriores.
 
 ```
 lib/google-sheets.ts   leitura das abas
@@ -109,7 +109,7 @@ O arquivo do Drive (PDF, PNG ou JPG) é convertido em imagem no navegador e apar
 Colunas (localizadas pelo nome do cabeçalho): **Data**, **Veiculo**, **Jornalista**, **Pauta**, **Atendido_ou_nao** e, opcional, `edicao_numero`. Os nomes do modelo antigo (`Demanda`, `Status`, `Atendido?`) ainda são aceitos.
 
 - **Atendido_ou_nao** `SIM` = atendido (fechado). `NÃO` ou vazio = em aberto (vazio gera aviso). Na tabela, os em aberto ficam em negrito.
-- Cada edição mostra os acionamentos dela mais os de edições anteriores ainda em aberto. O card da página 1 mostra os novos e quantos estão em aberto.
+- Cada edição mostra todos os acionamentos até ela, atendidos ou não. O card da página 1 mostra os novos (da edição) e quantos estão em aberto.
 - Linha sem Data, Veiculo ou Pauta fica fora do relatório (o painel avisa).
 
 ### `Registro_Central`
