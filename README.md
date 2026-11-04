@@ -108,7 +108,7 @@ O arquivo do Drive (PDF, PNG ou JPG) é convertido em imagem no navegador e apar
 
 Colunas (localizadas pelo nome do cabeçalho): **Data**, **Veiculo**, **Jornalista**, **Pauta**, **Atendido_ou_nao** e, opcional, `edicao_numero`. Os nomes do modelo antigo (`Demanda`, `Status`, `Atendido?`) ainda são aceitos.
 
-- **Atendido_ou_nao** `SIM` = atendido (fechado). `NÃO` ou vazio = em aberto (vazio gera aviso). Na tabela, os em aberto ficam em negrito.
+- **Atendido_ou_nao** `SIM` = atendido (fechado). `NÃO` ou vazio = em aberto (vazio gera aviso).
 - Cada edição mostra todos os acionamentos até ela, atendidos ou não. O card da página 1 mostra os novos (da edição) e quantos estão em aberto.
 - Linha sem Data, Veiculo ou Pauta fica fora do relatório (o painel avisa).
 

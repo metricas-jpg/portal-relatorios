@@ -280,7 +280,7 @@ function Pagina2({ r, linha, timeline, acionamentos }: { r: Dados; linha: string
     ...(r.acionamentos.linhas.length
       ? r.acionamentos.linhas.map((a, i) => ({
           id: `ac${i}`, grupo: 'tab' as const, secao: S2,
-          no: <tr><td>{a.data}</td><td>{a.veiculo}</td><td>{a.jornalista}</td><td>{a.pauta}</td><td className={a.emAberto ? 'aberto' : ''}>{a.atendido}</td></tr>,
+          no: <tr><td>{a.data}</td><td>{a.veiculo}</td><td>{a.jornalista}</td><td>{a.pauta}</td><td>{a.atendido}</td></tr>,
         }))
       : [{ id: 'ac-vazio', no: <p className="nota">Nenhum acionamento no período.</p>, secao: S2 }]),
     ...(r.leitura ? [{ id: 'leitura', secao: S2, no: <div className="leitura"><b>LEITURA</b><span>{rico(r.leitura)}</span></div> }] : []),
