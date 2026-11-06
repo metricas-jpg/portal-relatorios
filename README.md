@@ -102,7 +102,7 @@ No gerador, o painel **Montar relatório** liga e desliga partes do relatório: 
 
 ### Ordem dos anexos
 
-Data Coleta mais recente primeiro. No mesmo dia de coleta, Data do post mais recente primeiro (depois a hora da coleta, se houver, e a ordem da planilha). Linha sem Data Coleta vai para o fim. A ordem da planilha não importa.
+Data Coleta mais recente primeiro. No mesmo dia de coleta, Data do post mais recente primeiro. Empate: `id_do_print` maior primeiro (quando as duas linhas têm número) ou, sem ele, a linha mais embaixo na planilha primeiro. Linha sem Data Coleta vai para o fim. A ordem da planilha não importa.
 
 ### Prints dos anexos (COLUNA PRINT)
 

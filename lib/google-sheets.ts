@@ -38,6 +38,8 @@ export interface RegistroCentral {
   proximoMarco: boolean; gerarClipping: boolean; trecho: string; autoria: string; volume: number; printUrl: string;
   /** posicao_citacao (opcional): parte(s) do print em que o Sicoob aparece; preenchida, vale mais que a leitura automática */
   posicaoCitacao: string;
+  /** id_do_print (opcional): usado só para desempatar a ordem dos anexos */
+  idPrint: string;
   /** linha na aba Registro_Central (para avisos) */
   linha: number;
 }
@@ -231,7 +233,7 @@ export async function obterDadosDoRelatorio(spreadsheetId: string): Promise<Rela
         envolveSicoob: sim(v('envolveSicoob')), tipo: v('tipo'), fato: v('fato'), textoTimeline: v('textoTimeline'),
         tonalidade: v('tonalidade'), mostrarTimeline: sim(v('mostrarTimeline')), proximoMarco: sim(v('proximoMarco')),
         gerarClipping: sim(v('gerarClipping')), trecho: v('trecho'), autoria: v('autoria'),
-        volume: parseInt(v('volume')) || 1, printUrl: url('printUrl'), posicaoCitacao: v('posicaoCitacao'), linha: i + 2,
+        volume: parseInt(v('volume')) || 1, printUrl: url('printUrl'), posicaoCitacao: v('posicaoCitacao'), idPrint: v('idPrint'), linha: i + 2,
       });
     });
 

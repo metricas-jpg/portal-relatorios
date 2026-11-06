@@ -361,16 +361,21 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
 
   // ---------- anexos: todos os marcados, desta edição e das anteriores ----------
   // ordem: Data Coleta mais recente primeiro; no mesmo dia de coleta, Data do post mais recente
-  // primeiro; depois a hora da coleta (se houver) e, por fim, a ordem da planilha. Sem data vai para o fim.
+  // primeiro; empate: id_do_print maior primeiro (se as duas linhas tiverem número) ou, sem ele, a
+  // linha mais embaixo na planilha primeiro. Sem data vai para o fim.
   const tsDia = (d: DataLida | null) => (d ? new Date(d.ano, d.mes - 1, d.dia).getTime() : -Infinity);
-  const tsHora = (d: DataLida | null) => (d ? d.ts : -Infinity);
+  const numId = (id: string) => (/^\s*\d+\s*$/.test(id || '') ? Number(id) : null);
+  const desempate = (a: { r: Reg; ordem: number }, b: { r: Reg; ordem: number }) => {
+    const ia = numId(a.r.idPrint), ib = numId(b.r.idPrint);
+    if (ia != null && ib != null && ia !== ib) return ib - ia;
+    return b.ordem - a.ordem;
+  };
   const ordenados = regs.filter(r => r.gerarClipping)
     .map((r, ordem) => ({ r, ordem }))
     .sort((a, b) =>
       tsDia(b.r.dColeta) - tsDia(a.r.dColeta)
-      || tsHora(b.r.dPost) - tsHora(a.r.dPost)
-      || tsHora(b.r.dColeta) - tsHora(a.r.dColeta)
-      || a.ordem - b.ordem)
+      || tsDia(b.r.dPost) - tsDia(a.r.dPost)
+      || desempate(a, b))
     .map(x => x.r);
   const clippings: Clipping[] = ordenados.map((r, i) => {
     if (!r.fato) avisar('Registro_Central', 'anexo sem "Fato / Titulo da Materia" (o título do anexo fica vazio)', r.linha);
