@@ -360,7 +360,19 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const abertos = linhasAc.filter(a => a.emAberto).length;
 
   // ---------- anexos: todos os marcados, desta edição e das anteriores ----------
-  const clippings: Clipping[] = regs.filter(r => r.gerarClipping).map((r, i) => {
+  // ordem: Data Coleta mais recente primeiro; no mesmo dia de coleta, Data do post mais recente
+  // primeiro; depois a hora da coleta (se houver) e, por fim, a ordem da planilha. Sem data vai para o fim.
+  const tsDia = (d: DataLida | null) => (d ? new Date(d.ano, d.mes - 1, d.dia).getTime() : -Infinity);
+  const tsHora = (d: DataLida | null) => (d ? d.ts : -Infinity);
+  const ordenados = regs.filter(r => r.gerarClipping)
+    .map((r, ordem) => ({ r, ordem }))
+    .sort((a, b) =>
+      tsDia(b.r.dColeta) - tsDia(a.r.dColeta)
+      || tsHora(b.r.dPost) - tsHora(a.r.dPost)
+      || tsHora(b.r.dColeta) - tsHora(a.r.dColeta)
+      || a.ordem - b.ordem)
+    .map(x => x.r);
+  const clippings: Clipping[] = ordenados.map((r, i) => {
     if (!r.fato) avisar('Registro_Central', 'anexo sem "Fato / Titulo da Materia" (o título do anexo fica vazio)', r.linha);
     if (!r.trecho) avisar('Registro_Central', 'anexo sem "Trecho sobre o Sicoob"', r.linha);
     if (!r.printUrl) avisar('Registro_Central', 'anexo sem link na coluna do print', r.linha);
