@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { emailPodeEntrar } from '@/lib/acesso';
+import { PORTAL_PLANILHA_ID, intervaloPortal } from '@/lib/planilhas';
 
 export async function GET() {
     const session = await getServerSession(authOptions);
@@ -12,7 +13,7 @@ export async function GET() {
     try {
         const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
         const privateKey = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
-        const sheetId = process.env.GOOGLE_SHEET_ID;
+        const sheetId = PORTAL_PLANILHA_ID;
 
         if (!clientEmail || !privateKey || !sheetId) {
         return NextResponse.json({ error: 'Configurações de ambiente ausentes' }, { status: 500 });
@@ -28,7 +29,7 @@ export async function GET() {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: 'Relatorios!A2:G',
+      range: intervaloPortal('A2:G'),
     });
 
     const rows = response.data.values || [];
@@ -44,7 +45,7 @@ export async function GET() {
     }));
 
     return NextResponse.json({ relatorios });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro na API:', error);
     return NextResponse.json({ error: 'Erro ao consultar planilha' }, { status: 500 });
   }

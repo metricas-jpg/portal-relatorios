@@ -9,6 +9,15 @@ import { chaveCabecalho, lerGrade } from './google-sheets';
 export const PLANILHA_CENTRAL_ID = process.env.PLANILHA_CENTRAL_ID || '1lwY8VJo5Ki7GgrlDmAoidNUiSLrmVwtUmIE9LOuWdNs';
 export const PLANILHA_CENTRAL_ABA = process.env.PLANILHA_CENTRAL_ABA || 'Monitoramentos 2026';
 
+/**
+ * Lista do portal de relatórios (página inicial): aba portal_de_relatorios da planilha central,
+ * colunas id_arquivo, nome_arquivo, data_relatorio, url_visualizacao, url_download,
+ * titulo_amigavel, data_atualizacao (A a G, título na linha 1). Variáveis opcionais para trocar.
+ */
+export const PORTAL_PLANILHA_ID = process.env.PORTAL_PLANILHA_ID || PLANILHA_CENTRAL_ID;
+export const PORTAL_ABA = process.env.PORTAL_ABA || 'portal_de_relatorios';
+export const intervaloPortal = (colunas: string) => `'${PORTAL_ABA.replace(/'/g, "''")}'!${colunas}`;
+
 export interface Monitoramento { id: string; nome: string }
 
 const CACHE_MS = 60_000;

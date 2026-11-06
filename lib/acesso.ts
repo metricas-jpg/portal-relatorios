@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 import { lerGrade } from './google-sheets';
-import { obterMonitoramento } from './planilhas';
+import { obterMonitoramento, PORTAL_PLANILHA_ID, intervaloPortal } from './planilhas';
 import { ADMINS, DOMINIO_LOGGIA, areaNaLista, type ArquivoAcessos } from './acessos';
 import arquivoAcessos from '@/config/acessos.json';
 
@@ -16,7 +16,7 @@ import arquivoAcessos from '@/config/acessos.json';
  *
  * 3. ADMINISTRADORES da lista de acessos: os e-mails de ADMINS (lib/acessos.ts).
  *
- * 4. Quais ARQUIVOS do Drive o portal entrega: só os que aparecem na aba "Relatorios"
+ * 4. Quais ARQUIVOS do Drive o portal entrega: só os que aparecem na aba "portal_de_relatorios"
  *    (portal) ou no "Registro_Central" da planilha de monitoramento do relatório aberto.
  */
 
@@ -83,15 +83,15 @@ async function idsDaFonte(chave: string, ler: () => Promise<string[]>, fileId: s
 }
 
 /**
- * O arquivo só é entregue se o ID aparecer na aba Relatorios do portal ou no Registro_Central da
+ * O arquivo só é entregue se o ID aparecer na aba portal_de_relatorios do portal ou no Registro_Central da
  * planilha de monitoramento informada (que precisa estar na lista da planilha central).
  */
 export async function arquivoPermitido(fileId: string, planilhaId?: string | null): Promise<boolean> {
   if (!/^[-\w]{25,}$/.test(fileId)) return false;
-  const portal = process.env.GOOGLE_SHEET_ID;
+  const portal = PORTAL_PLANILHA_ID;
   if (portal) {
     const ids = await idsDaFonte(`portal:${portal}`, async () => {
-      const res = await sheetsClient().spreadsheets.values.get({ spreadsheetId: portal, range: 'Relatorios!A2:E' });
+      const res = await sheetsClient().spreadsheets.values.get({ spreadsheetId: portal, range: intervaloPortal('A2:E') });
       return (res.data.values || []).flat().map(String);
     }, fileId);
     if (ids.has(fileId)) return true;
