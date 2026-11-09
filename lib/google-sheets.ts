@@ -30,6 +30,8 @@ export interface RelatorioDados {
   avisosLeitura?: string[];
   registros: RegistroCentral[];
   acionamentos: AcionamentoImprensa[];
+  /** o Registro_Central tem a coluna "prioridade" (sem ela, a reordenação pelo site fica desligada) */
+  temPrioridade?: boolean;
 }
 
 export interface RegistroCentral {
@@ -40,6 +42,8 @@ export interface RegistroCentral {
   posicaoCitacao: string;
   /** id_do_print (opcional): usado só para desempatar a ordem dos anexos */
   idPrint: string;
+  /** prioridade (opcional): desempata itens com a mesma Data Coleta e Data do post (1 = primeiro) */
+  prioridade: number | null;
   /** linha na aba Registro_Central (para avisos) */
   linha: number;
 }
@@ -57,7 +61,7 @@ export const chaveCabecalho = (s: string) =>
 interface Coluna { campo: string; nome: string; nomes: string[]; pos: number }
 
 /** Registro_Central (pos = ordem atual do modelo, usada só se o cabeçalho não for encontrado) */
-const COLUNAS_REGISTRO: Coluna[] = [
+export const COLUNAS_REGISTRO: Coluna[] = [
   { campo: 'edicao', nome: 'edicao_numero', nomes: ['edicaonumero', 'edicao', 'versao'], pos: 0 },
   { campo: 'idPrint', nome: 'id_do_print', nomes: ['iddoprint', 'idprint'], pos: 1 },
   { campo: 'dataPost', nome: 'Data do post', nomes: ['datadopostddmm', 'datadopost', 'datapost', 'datadapublicacao'], pos: 2 },
@@ -77,7 +81,10 @@ const COLUNAS_REGISTRO: Coluna[] = [
   { campo: 'volume', nome: 'Volume Agrupado', nomes: ['volumeagrupadovazio1', 'volumeagrupado', 'volume'], pos: 16 },
   { campo: 'printUrl', nome: 'coluna_print', nomes: ['colunaprint', 'linkdoprint', 'print'], pos: 17 },
   { campo: 'posicaoCitacao', nome: 'posicao_citacao', nomes: ['posicaocitacao', 'posicaodacitacao', 'localizadordecitacao', 'partedacitacao'], pos: 18 },
+  { campo: 'prioridade', nome: 'prioridade', nomes: ['prioridade', 'ordem'], pos: 19 },
 ];
+/** colunas do Registro_Central que podem não existir sem gerar aviso */
+export const OPCIONAIS_REGISTRO = ['edicao', 'idPrint', 'posicaoCitacao', 'volume', 'prioridade'];
 
 /** Acionamentos_Imprensa: Data, Veiculo, Jornalista, Pauta, Atendido_ou_nao (+ edicao_numero opcional) */
 const COLUNAS_ACIONAMENTOS: Coluna[] = [
@@ -220,7 +227,7 @@ export async function obterDadosDoRelatorio(spreadsheetId: string): Promise<Rela
 
     // ---------- Registro_Central ----------
     const [cabReg = [], ...linhasReg] = grade;
-    const p = mapearColunas(cabReg.map(c => c.texto), COLUNAS_REGISTRO, 'Registro_Central', avisosLeitura, ['edicao', 'idPrint', 'posicaoCitacao', 'volume']);
+    const p = mapearColunas(cabReg.map(c => c.texto), COLUNAS_REGISTRO, 'Registro_Central', avisosLeitura, OPCIONAIS_REGISTRO);
     const registros: RegistroCentral[] = [];
     linhasReg.forEach((l, i) => {
       if (vazioLinha(l)) return;
@@ -233,7 +240,8 @@ export async function obterDadosDoRelatorio(spreadsheetId: string): Promise<Rela
         envolveSicoob: sim(v('envolveSicoob')), tipo: v('tipo'), fato: v('fato'), textoTimeline: v('textoTimeline'),
         tonalidade: v('tonalidade'), mostrarTimeline: sim(v('mostrarTimeline')), proximoMarco: sim(v('proximoMarco')),
         gerarClipping: sim(v('gerarClipping')), trecho: v('trecho'), autoria: v('autoria'),
-        volume: parseInt(v('volume')) || 1, printUrl: url('printUrl'), posicaoCitacao: v('posicaoCitacao'), idPrint: v('idPrint'), linha: i + 2,
+        volume: parseInt(v('volume')) || 1, printUrl: url('printUrl'), posicaoCitacao: v('posicaoCitacao'), idPrint: v('idPrint'),
+        prioridade: /^\s*\d+\s*$/.test(v('prioridade')) ? Number(v('prioridade')) : null, linha: i + 2,
       });
     });
 
@@ -250,7 +258,7 @@ export async function obterDadosDoRelatorio(spreadsheetId: string): Promise<Rela
       });
     });
 
-    return { geral: {}, edicoes: edicoesUnicas, registros, acionamentos, avisosLeitura };
+    return { geral: {}, edicoes: edicoesUnicas, registros, acionamentos, avisosLeitura, temPrioridade: p.prioridade >= 0 };
   } catch (error) {
     const e = error as { code?: number; message?: string };
     console.error('Erro na planilha:', e.message || error);

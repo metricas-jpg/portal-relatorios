@@ -146,6 +146,9 @@
   left: calc(81.35pt - var(--d) / 2); top: calc(6.75pt - var(--d) / 2); width: var(--d); height: var(--d);
 }
 .doc .tl > .tl-item { position: relative; }
+/* modo edição: item empatado da linha do tempo, com ↑ ↓ à direita (abaixo da etiqueta) */
+.doc .tl-row.tl-movel { outline: 1.2pt dashed var(--turquesa); outline-offset: 2pt; border-radius: 4pt; background: #F2FBFA; }
+.doc .tl-row .tl-mover { position: absolute; right: 0; top: 11pt; z-index: 2; }
 /* linha vertical: do ponto deste item até o ponto do próximo (passa pela divisória, se houver) */
 .doc .tl > .tl-item:not(:last-child)::after {
   content: ""; position: absolute; left: 80.6pt; top: 6.75pt; bottom: -6.75pt; width: 1.5pt; background: var(--linha);

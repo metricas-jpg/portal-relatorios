@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useEdicao } from './Edicao';
 
 /**
  * Botão "Gerar Relatório Final": espera os prints dos anexos terminarem de carregar
@@ -32,7 +33,14 @@ export default function PrintController({ totalAnexos, nomeArquivo }: { totalAne
     return () => window.removeEventListener('anexos-mudou', atualizar);
   }, []);
 
+  const edicao = useEdicao();
   const gerar = () => {
+    // modo edição: avisa se a nova ordem ainda não foi salva e desliga o modo (a tela vira o PDF)
+    if (edicao.pendentes > 0 && !window.confirm(`A nova ordem (${edicao.pendentes} ${edicao.pendentes === 1 ? 'item' : 'itens'}) ainda não foi salva na planilha. Gerar o PDF com a ordem da tela mesmo assim?`)) return;
+    if (edicao.ligado) { edicao.alternar(); setTimeout(gerarAgora, 350); return; }
+    gerarAgora();
+  };
+  const gerarAgora = () => {
     // pede aos anexos que ainda não carregaram para carregar agora (eles entram na contagem na hora)
     window.dispatchEvent(new CustomEvent('gerar-relatorio'));
     if ((window.__anexosPendentes || 0) > 0) { esperandoRef.current = true; setEsperando(true); }

@@ -106,9 +106,18 @@ Definidas em `lib/escalas.ts` (régua dos cards da página 1 e avisos).
 - **Risco:** Baixo · Médio · Alto.
 - **Status da crise:** Latente · Em alta · Crítico · Em queda · Controlada · Monitorada. Masculino ou feminino valem igual ("CONTROLADO" = "CONTROLADA"). Valor fora da escala, ou da escala antiga (Sinais, Fase aguda, Em desdobramento, Encerrado), gera aviso e nenhum nível fica destacado.
 
+### Modo edição (gerador)
+
+Interruptor **Modo edição** na barra do gerador. Desligado, a tela fica igual ao PDF. Ligado:
+- aparece o painel **Montar relatório** (módulos);
+- itens **empatados** ganham ↑ ↓: na linha do tempo, mesmo dia de post; nos anexos, mesma Data Coleta e mesma Data do post. A ordem editada vale para as duas listas (a prioridade é por linha da planilha);
+- **Salvar na planilha** grava a coluna `prioridade` do Registro_Central (1 = primeiro); **Voltar à ordem automática** apaga as prioridades; **Descartar** desfaz o que não foi salvo.
+
+Gravação (`lib/escrita.ts`, `app/api/prioridade`): só a coluna `prioridade`; antes de gravar, relê as linhas e confere `id_do_print` (ou o título) — se a planilha mudou, não grava e pede para recarregar; cada célula recebe uma nota "Ordem definida pelo gerador por <e-mail> em <data>". Requer a conta do site como **Editor** (Colaborador, em drives compartilhados). Sem a coluna `prioridade` (aceita também `ordem`), tudo funciona como antes e a faixa explica como ativar. "Gerar Relatório Final" desliga o modo antes de imprimir e avisa se houver ordem não salva.
+
 ### Ordem dos anexos
 
-Data Coleta mais recente primeiro. No mesmo dia de coleta, Data do post mais recente primeiro. Empate: `id_do_print` maior primeiro (quando as duas linhas têm número) ou, sem ele, a linha mais embaixo na planilha primeiro. Linha sem Data Coleta vai para o fim. A ordem da planilha não importa.
+Data Coleta mais recente primeiro. No mesmo dia de coleta, Data do post mais recente primeiro. Empate: `prioridade` (1 primeiro, quando preenchida); depois `id_do_print` maior primeiro (quando as duas linhas têm número) ou, sem ele, a linha mais embaixo na planilha primeiro. Linha sem Data Coleta vai para o fim. A ordem da planilha não importa.
 
 ### Prints dos anexos (COLUNA PRINT)
 

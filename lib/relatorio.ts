@@ -21,6 +21,16 @@ export const REDES = [
 export type Rede = (typeof REDES)[number]['chave'];
 export const nomeRede = (r: Rede) => REDES.find(x => x.chave === r)!.nome;
 
+/** início do dia (para comparar datas sem a hora); sem data = -Infinity */
+const tsDia = (d: DataLida | null) => (d ? new Date(d.ano, d.mes - 1, d.dia).getTime() : -Infinity);
+
+/** marca a divisória entre as novidades da edição e as edições anteriores (também usada no navegador) */
+export function marcarDivisao(timeline: ItemTimeline[]) {
+  timeline.forEach(t => { t.divisaoAbaixo = false; });
+  const iVelho = timeline.findIndex(t => !t.novo);
+  if (iVelho > 0 && timeline.slice(0, iVelho).some(t => t.novo && t.tom !== 'next')) timeline[iVelho - 1].divisaoAbaixo = true;
+}
+
 export const normalizar = (s: string) =>
   (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase();
 
@@ -113,9 +123,14 @@ const chaveDia = (d: DataLida) => d.ano * 10000 + d.mes * 100 + d.dia;
 
 // ---------- tipos do relatório ----------
 export type Tom = 'neg' | 'neu' | 'pos' | 'acl' | 'ctx' | 'next';
-export interface ItemTimeline { data: string; texto: string; tom: Tom; complemento?: string; novo?: boolean; divisaoAbaixo?: boolean }
+/**
+ * Identidade de um item que pode ser reordenado no modo edição: a linha da planilha (com id e
+ * título, conferidos antes de gravar), o grupo de empate e a prioridade lida da planilha.
+ */
+export interface Reordenavel { linha: number; idPrint: string; fato: string; grupo: string; prioridade: number | null }
+export interface ItemTimeline extends Reordenavel { data: string; texto: string; tom: Tom; complemento?: string; novo?: boolean; divisaoAbaixo?: boolean }
 export interface DiaGrafico { rotulo: string; porRede: Record<Rede, number>; total: number }
-export interface Clipping {
+export interface Clipping extends Reordenavel {
   idUnico: string; rede: Rede; veiculo: string; titulo: string; dataPost: string; dataColeta: string;
   link: string; autoria: string; tonalidade: string; tom: Tom; trecho: string; printUrl: string;
   /** publicação da edição escolhida (só marcada a partir da 2ª edição) */
@@ -144,6 +159,8 @@ export interface Relatorio {
   leitura: string;
   clippings: Clipping[];
   avisos: string[];
+  /** a planilha tem a coluna prioridade (reordenação de empates disponível) */
+  temPrioridade: boolean;
 }
 
 const zeroRedes = () => Object.fromEntries(REDES.map(r => [r.chave, 0])) as Record<Rede, number>;
@@ -320,19 +337,23 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     // data completa (19/10/2026) aparece como dd/mm, igual ao modelo; faixas e textos ficam como estão
     const data = r.dPost && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(r.dataPost.trim()) ? ddmm(r.dPost) : (r.dataPost || '');
     const novo = r.proximoMarco || daEdicao(r.ed);
-    return { item: { data, texto, tom, complemento, novo } as ItemTimeline, ts: r.dPost?.ts, proximo: r.proximoMarco, ordem };
+    // empate = mesmo dia de post (e mesma condição de próximo marco)
+    const grupo = r.dPost ? `${r.proximoMarco ? 'P' : 'T'}|${chaveDia(r.dPost)}` : '';
+    const item: ItemTimeline = { data, texto, tom, complemento, novo, linha: r.linha, idPrint: r.idPrint, fato: r.fato, grupo, prioridade: r.prioridade };
+    return { item, ts: r.dPost?.ts, dia: r.dPost ? tsDia(r.dPost) : null, proximo: r.proximoMarco, ordem };
   });
-  // Próximo marco primeiro; depois do mais recente para o mais antigo; itens sem data no fim
+  // Próximo marco primeiro; depois do dia mais recente para o mais antigo (itens sem data no fim);
+  // no mesmo dia: prioridade, hora do post e ordem da planilha
+  const prio = (p: number | null) => p ?? Infinity;
   itens.sort((a, b) =>
     (+b.proximo - +a.proximo) ||
-    ((a.ts == null ? 1 : 0) - (b.ts == null ? 1 : 0)) ||
+    ((a.dia == null ? 1 : 0) - (b.dia == null ? 1 : 0)) ||
+    ((b.dia ?? 0) - (a.dia ?? 0)) ||
+    (prio(a.item.prioridade) - prio(b.item.prioridade)) ||
     ((b.ts ?? 0) - (a.ts ?? 0)) || (a.ordem - b.ordem));
   const timeline = itens.map(i => i.item);
   // divisória entre as novidades desta edição e as edições anteriores
-  if (!primeira) {
-    const iVelho = timeline.findIndex(t => !t.novo);
-    if (iVelho > 0 && timeline.slice(0, iVelho).some(t => t.novo && t.tom !== 'next')) timeline[iVelho - 1].divisaoAbaixo = true;
-  }
+  if (!primeira) marcarDivisao(timeline);
 
   // ---------- acionamentos: todos até a edição escolhida (atendidos ou não), como a linha do tempo ----------
   // Atendido_ou_nao = SIM fecha o acionamento; NÃO ou vazio = em aberto (textos do modelo antigo também valem)
@@ -362,9 +383,9 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
 
   // ---------- anexos: todos os marcados, desta edição e das anteriores ----------
   // ordem: Data Coleta mais recente primeiro; no mesmo dia de coleta, Data do post mais recente
-  // primeiro; empate: id_do_print maior primeiro (se as duas linhas tiverem número) ou, sem ele, a
-  // linha mais embaixo na planilha primeiro. Sem data vai para o fim.
-  const tsDia = (d: DataLida | null) => (d ? new Date(d.ano, d.mes - 1, d.dia).getTime() : -Infinity);
+  // primeiro; empate: prioridade (1 primeiro; definida no modo edição ou na planilha), depois
+  // id_do_print maior primeiro (se as duas linhas tiverem número) ou, sem ele, a linha mais embaixo
+  // na planilha primeiro. Sem data vai para o fim.
   const numId = (id: string) => (/^\s*\d+\s*$/.test(id || '') ? Number(id) : null);
   const desempate = (a: { r: Reg; ordem: number }, b: { r: Reg; ordem: number }) => {
     const ia = numId(a.r.idPrint), ib = numId(b.r.idPrint);
@@ -376,6 +397,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     .sort((a, b) =>
       tsDia(b.r.dColeta) - tsDia(a.r.dColeta)
       || tsDia(b.r.dPost) - tsDia(a.r.dPost)
+      || ((a.r.prioridade ?? Infinity) - (b.r.prioridade ?? Infinity) || 0)
       || desempate(a, b))
     .map(x => x.r);
   const clippings: Clipping[] = ordenados.map((r, i) => {
@@ -389,6 +411,9 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
       titulo: r.fato, dataPost: r.dPost ? `${ddmm(r.dPost)}/${r.dPost.ano}` : r.dataPost, dataColeta: r.dataColeta,
       link: r.linkMateria, autoria: r.autoria, tonalidade: r.tonalidade, tom: tomDaTonalidade(r.tonalidade) || 'acl',
       trecho: r.trecho, printUrl: r.printUrl, nova: !primeira && daEdicao(r.ed), posicaoCitacao: r.posicaoCitacao || '',
+      linha: r.linha, idPrint: r.idPrint, fato: r.fato, prioridade: r.prioridade,
+      // empate = mesmo dia de coleta e mesmo dia de post
+      grupo: r.dColeta || r.dPost ? `${r.dColeta ? chaveDia(r.dColeta) : '-'}|${r.dPost ? chaveDia(r.dPost) : '-'}` : '',
     };
   });
 
@@ -424,7 +449,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     tituloMudou: geral.titulo_o_que_mudou || 'O QUE MUDOU', mudou: geral.o_que_mudou || '',
     tituloSignifica: geral.titulo_o_que_significa || 'O QUE SIGNIFICA PARA O SICOOB', significa: geral.o_que_significa || '',
     protagonismo: geral.protagonismo || '',
-    grafico, timeline,
+    grafico, timeline, temPrioridade: !!dados.temPrioridade,
     analise: {
       revisao: geral.analise_revisao_data || '', manchete: geral.analise_caso || '',
       papel: geral.papel_sicoob || '', centro: geral.centro_pauta || '',

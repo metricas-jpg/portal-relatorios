@@ -11,6 +11,7 @@ import PainelAvisos from '../PainelAvisos';
 import Relatorio from '../Relatorio';
 import SeletorEdicao from '../SeletorEdicao';
 import { ModulosProvider, PainelModulos } from '../Modulos';
+import { EdicaoProvider, FaixaEdicao, InterruptorEdicao } from '../Edicao';
 import { contagens } from '@/lib/modulos';
 import { AcessoRestrito, AvisoErro, TelaSelecao } from '../Moldura';
 import '../gerador.css';
@@ -82,8 +83,14 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
   const r = montarRelatorio(escolhida);
   const atual = eds.find(e => e.numero === numero)!;
 
+  // grupos de empate (2 ou mais itens com a mesma data), contados nas duas listas
+  const grupos = new Set(
+    [r.timeline, r.clippings].flatMap((lista, k) => lista.filter(i => i.grupo && lista.filter(j => j.grupo === i.grupo).length > 1).map(i => `${k}:${i.grupo}`)),
+  ).size;
+
   return (
     <ModulosProvider planilha={planilha} edicao={atual.numero} contagem={contagens(r)}>
+    <EdicaoProvider planilha={planilha} temPrioridade={r.temPrioridade} itens={[...r.timeline, ...r.clippings]}>
     <div className="doc">
       {/* barra de controle (não sai na impressão) */}
       <header className="print-hidden w-full max-w-[595pt] bg-[#003641] text-white p-4 rounded-xl shadow-lg flex flex-col gap-3">
@@ -103,7 +110,10 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
               <span aria-hidden="true">↗</span>
             </a>
           </div>
+          <div className="flex items-center gap-4 shrink-0">
+          <InterruptorEdicao />
           <PrintController totalAnexos={r.clippings.filter(c => c.printUrl).length} nomeArquivo={nomeArquivo(r, monitoramento.nome)} />
+          </div>
         </div>
         {(eds.length > 1 || atual.descricao) && (
           <div className="flex items-center gap-4 border-t border-white/10 pt-3">
@@ -115,12 +125,15 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
         )}
       </header>
 
+      <FaixaEdicao grupos={grupos} />
+
       <PainelModulos edicao={atual.numero} />
 
       <PainelAvisos avisos={r.avisos} />
 
       <Relatorio r={r} planilha={planilha} />
     </div>
+    </EdicaoProvider>
     </ModulosProvider>
   );
 }
