@@ -100,6 +100,12 @@ No gerador, o painel **Montar relatório** liga e desliga partes do relatório: 
 - **Armazenamento:** Redis da Upstash pela Vercel Marketplace (plano gratuito; cada planilha ocupa poucos bytes). Variáveis `KV_REST_API_URL` e `KV_REST_API_TOKEN` (ou `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`), criadas pela integração. Sem elas, a escolha fica só no navegador de quem gerou e o painel avisa.
 - Código: `lib/modulos.ts` (módulos e regras), `lib/kv.ts` (armazenamento), `app/api/modulos` (leitura e gravação), `app/gerador/Modulos.tsx` (painel).
 
+### Escalas de risco e de status
+
+Definidas em `lib/escalas.ts` (régua dos cards da página 1 e avisos).
+- **Risco:** Baixo · Médio · Alto.
+- **Status da crise:** Latente · Em alta · Crítico · Em queda · Controlada · Monitorada. Masculino ou feminino valem igual ("CONTROLADO" = "CONTROLADA"). Valor fora da escala, ou da escala antiga (Sinais, Fase aguda, Em desdobramento, Encerrado), gera aviso e nenhum nível fica destacado.
+
 ### Ordem dos anexos
 
 Data Coleta mais recente primeiro. No mesmo dia de coleta, Data do post mais recente primeiro. Empate: `id_do_print` maior primeiro (quando as duas linhas têm número) ou, sem ele, a linha mais embaixo na planilha primeiro. Linha sem Data Coleta vai para o fim. A ordem da planilha não importa.
