@@ -7,40 +7,26 @@ import { st, mv, lim, rico, vazio, tendencia, Rodape, CabecalhoInterno } from '.
 import AjustePagina1 from './AjustePagina1';
 import { useModulos } from './Modulos';
 import { avisarRelatorio } from './avisos-cliente';
-import { REDES, normalizar, type Relatorio as Dados, type ItemTimeline, type Tom } from '@/lib/relatorio';
+import { ESCALA_RISCO, ESCALA_STATUS, nivelDaEscala, type Nivel } from '@/lib/escalas';
+import { REDES, type Relatorio as Dados, type ItemTimeline, type Tom } from '@/lib/relatorio';
 
 /* ============================== página 1 ============================== */
 
 /**
- * Escalas de risco e status, mostradas sob o texto de cada card. O nível atual fica destacado
- * na cor do card. Textos fixos (a régua é a mesma em todos os relatórios).
+ * Régua de risco e de status sob o texto de cada card (escalas em lib/escalas.ts). O nível atual
+ * fica destacado na cor do card.
  */
-const ESCALA_RISCO: [string, string][] = [
-  ['Baixo', 'Sicoob ausente ou citado de passagem; semanal'],
-  ['Médio', 'parte do fato ou acionado; diário'],
-  ['Alto', 'ato de autoridade, tom negativo ou grande alcance; várias vezes ao dia'],
-];
-const ESCALA_STATUS: [string, string][] = [
-  ['Sinais', 'indícios, sem fato com o Sicoob'],
-  ['Fase aguda', 'fato em curso, pressão subindo'],
-  ['Em desdobramento', 'pico passou, há marcos à frente'],
-  ['Controlado', 'sem fatos nem marcos próximos'],
-  ['Encerrado', 'sem pendências'],
-];
-
-function Escala({ itens, atual, cor, top, left, nome }: { itens: [string, string][]; atual: string; cor: string; top: string; left: number; nome: string }) {
-  const n = normalizar(atual);
+function Escala({ itens, atual, cor, top, left, nome }: { itens: Nivel[]; atual: string; cor: string; top: string; left: number; nome: string }) {
+  const ativo = nivelDaEscala(atual, itens);
   return (
     <span className="t wrap z65 c-cinza lim escala" data-limite={`Escala de ${nome}`} style={st(top, left, lim(3, 229.3))}>
-      {itens.map(([rotulo, texto], i) => {
-        const ativo = !!n && normalizar(rotulo) === n;
-        return (
-          <Fragment key={rotulo}>
-            {i > 0 && '  ·  '}
-            <b style={{ color: ativo ? cor : 'var(--texto)' }}>{rotulo}:</b> {texto}
-          </Fragment>
-        );
-      })}
+      {itens.map((n, i) => (
+        <Fragment key={n.rotulo}>
+          {i > 0 && '  ·  '}
+          {/* rótulo nunca quebra no meio ("Em queda") */}
+          <b style={{ color: n === ativo ? cor : 'var(--texto)' }}>{n.rotulo.replace(/ /g, '\u00a0')}:</b> {n.curto}
+        </Fragment>
+      ))}
     </span>
   );
 }

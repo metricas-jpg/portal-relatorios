@@ -1,4 +1,5 @@
 import type { RelatorioDados, RegistroCentral } from './google-sheets';
+import { ESCALA_STATUS, STATUS_ANTIGOS, nivelDaEscala } from './escalas';
 import { numeroEdicao } from './edicoes';
 
 /**
@@ -397,6 +398,14 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   });
 
   // ---------- risco (cores definidas pela equipe) ----------
+  // status fora da escala (ou da escala antiga): aviso, para a régua do card destacar o nível certo
+  const statusCrise = (geral.status_crise || '').trim();
+  if (statusCrise && !nivelDaEscala(statusCrise, ESCALA_STATUS)) {
+    const nomes = ESCALA_STATUS.map(n => n.rotulo.toUpperCase()).join(', ');
+    avisos.push(STATUS_ANTIGOS.includes(normalizar(statusCrise))
+      ? `Configuracoes_Gerais: status_crise "${statusCrise}" é da escala antiga; use ${nomes}.`
+      : `Configuracoes_Gerais: status_crise "${statusCrise}" não está na escala (${nomes}); nenhum nível fica destacado no card.`);
+  }
   const nivelRisco = (geral.nivel_risco || 'BAIXO').toUpperCase();
   const nr = normalizar(nivelRisco);
   const corRisco = nr === 'ALTO' ? '#003641' : nr === 'MEDIO' ? '#c9d200' : '#7db61c';
