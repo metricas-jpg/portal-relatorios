@@ -186,6 +186,21 @@ export function juntarDataHora(data: string, hora: string): { valor: string; hor
   return { valor: `${soData} ${m[1].padStart(2, '0')}:${m[2] || '00'}`, horaInvalida: false };
 }
 
+/**
+ * Prioridade como número. Se a célula estiver formatada como data, o Sheets mostra o número como
+ * data (1 = 31/12/1899, 2 = 01/01/1900...): converte de volta para o número.
+ */
+export function lerPrioridade(texto: string): number | null {
+  const t = (texto || '').trim();
+  if (/^\d+$/.test(t)) return Number(t);
+  const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) {
+    const dias = Math.round((Date.UTC(+m[3], +m[2] - 1, +m[1]) - Date.UTC(1899, 11, 30)) / 86400000);
+    if (dias >= 1 && dias <= 999) return dias;
+  }
+  return null;
+}
+
 const vazioLinha = (l: unknown[]) => !l.some(c => String((c as Celula)?.texto ?? c ?? '').trim());
 
 export async function obterDadosDoRelatorio(spreadsheetId: string): Promise<RelatorioDados> {
@@ -241,7 +256,7 @@ export async function obterDadosDoRelatorio(spreadsheetId: string): Promise<Rela
         tonalidade: v('tonalidade'), mostrarTimeline: sim(v('mostrarTimeline')), proximoMarco: sim(v('proximoMarco')),
         gerarClipping: sim(v('gerarClipping')), trecho: v('trecho'), autoria: v('autoria'),
         volume: parseInt(v('volume')) || 1, printUrl: url('printUrl'), posicaoCitacao: v('posicaoCitacao'), idPrint: v('idPrint'),
-        prioridade: /^\s*\d+\s*$/.test(v('prioridade')) ? Number(v('prioridade')) : null, linha: i + 2,
+        prioridade: lerPrioridade(v('prioridade')), linha: i + 2,
       });
     });
 

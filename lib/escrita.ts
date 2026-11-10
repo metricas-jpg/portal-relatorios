@@ -72,9 +72,11 @@ export async function gravarPrioridades(planilha: string, itens: ItemPrioridade[
         range: { sheetId: aba.sheetId, startRowIndex: it.linha - 1, endRowIndex: it.linha, startColumnIndex: p.prioridade, endColumnIndex: p.prioridade + 1 },
         rows: [{ values: [{
           userEnteredValue: it.prioridade == null ? undefined : { numberValue: it.prioridade },
+          // número simples: se a coluna herdou formato de data, 1 apareceria como 31/12/1899
+          userEnteredFormat: { numberFormat: { type: 'NUMBER', pattern: '0' } },
           note: it.prioridade == null ? '' : `Ordem definida pelo gerador por ${email} em ${quando}.`,
         }] }],
-        fields: 'userEnteredValue,note',
+        fields: 'userEnteredValue,userEnteredFormat.numberFormat,note',
       },
     }));
     await sheets.spreadsheets.batchUpdate({ spreadsheetId: planilha, requestBody: { requests } });
