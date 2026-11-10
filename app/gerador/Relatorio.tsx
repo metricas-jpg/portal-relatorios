@@ -1,14 +1,15 @@
 'use client';
 
-import { Fragment, type CSSProperties } from 'react';
+import { Fragment, useMemo, type CSSProperties } from 'react';
 import Paginador, { type Bloco } from './Paginador';
 import Anexo from './Anexo';
 import { st, mv, lim, rico, vazio, tendencia, Rodape, CabecalhoInterno } from './comum';
 import AjustePagina1 from './AjustePagina1';
 import { useModulos } from './Modulos';
+import { Setas, useEdicao } from './Edicao';
 import { avisarRelatorio } from './avisos-cliente';
 import { ESCALA_RISCO, ESCALA_STATUS, nivelDaEscala, type Nivel } from '@/lib/escalas';
-import { REDES, type Relatorio as Dados, type ItemTimeline, type Tom } from '@/lib/relatorio';
+import { REDES, marcarDivisao, type Relatorio as Dados, type ItemTimeline, type Tom } from '@/lib/relatorio';
 
 /* ============================== página 1 ============================== */
 
@@ -221,12 +222,28 @@ const TAG: Partial<Record<Tom, [string, string]>> = {
   neg: ['NEGATIVA', 'c-verm'], neu: ['NEUTRA', 'c-neutra'], pos: ['POSITIVA', 'c-verde'], acl: ['[A CLASSIFICAR]', 'c-cinza'],
 };
 
-function LinhaTimeline({ item }: { item: ItemTimeline }) {
+/** controles do modo edição num item empatado da linha do tempo (não saem no PDF) */
+function ControleTimeline({ lista, item }: { lista: ItemTimeline[]; item: ItemTimeline }) {
+  const ed = useEdicao();
+  if (!ed.ligado || !ed.temPrioridade || ed.empatados(lista, item) < 2) return null;
+  const grupo = lista.filter(i => i.grupo === item.grupo);
+  const k = grupo.indexOf(item);
+  return (
+    <span className="tl-mover print-hidden">
+      <Setas rotulo={item.texto.slice(0, 40)} podeSubir={k > 0} podeDescer={k < grupo.length - 1} onMover={d => ed.mover(lista, item.linha, d)} />
+    </span>
+  );
+}
+
+function LinhaTimeline({ item, lista }: { item: ItemTimeline; lista: ItemTimeline[] }) {
   const ponto = item.tom === 'next' ? 'next' : item.tom === 'ctx' ? 'p' : `g ${item.tom}`;
   const tag = TAG[item.tom];
+  const ed = useEdicao();
+  const movel = ed.ligado && ed.temPrioridade && ed.empatados(lista, item) > 1;
   return (
     <>
-      <div className={`tl-row ${item.tom}`}>
+      <div className={`tl-row ${item.tom}${movel ? ' tl-movel' : ''}`}>
+        <ControleTimeline lista={lista} item={item} />
         <span className="data">{item.tom === 'next' ? 'Próximo' : item.data}</span>
         <i className={`ponto ${ponto}`} />
         <div className="txt">{rico(item.texto)}{item.complemento && <> <b>[{item.complemento}]</b></>}</div>
@@ -252,13 +269,13 @@ function legendaTimeline() {
   );
 }
 
-function Pagina2({ r, linha, timeline, acionamentos }: { r: Dados; linha: string; timeline: boolean; acionamentos: boolean }) {
+function Pagina2({ r, linha, timeline, acionamentos, itensTimeline }: { r: Dados; linha: string; timeline: boolean; acionamentos: boolean; itensTimeline: ItemTimeline[] }) {
   const S1 = 'Linha do tempo das menções', S2 = 'Acionamentos de imprensa';
   const blocosTimeline: Bloco[] = [
     { id: 'h-tl', no: <div className="h2">{S1}</div>, manterComProximo: true, secao: S1, inicioSecao: true },
     { id: 'leg', no: legendaTimeline(), manterComProximo: true, secao: S1 },
-    ...(r.timeline.length
-      ? r.timeline.map((item, i) => ({ id: `tl${i}`, no: <LinhaTimeline item={item} />, grupo: 'tl' as const, secao: S1 }))
+    ...(itensTimeline.length
+      ? itensTimeline.map((item, i) => ({ id: `tl${i}`, no: <LinhaTimeline item={item} lista={itensTimeline} />, grupo: 'tl' as const, secao: S1 }))
       : [{ id: 'tl-vazio', no: <p className="nota">Nenhum item marcado com “Mostrar Timeline? = SIM”.</p>, secao: S1 }]),
   ];
   const blocosAcionamentos: Bloco[] = [
@@ -322,21 +339,47 @@ function Pagina3({ r, linha, contexto, gatilhos }: { r: Dados; linha: string; co
 
 /* ============================== documento ============================== */
 
+/** barra acima de um anexo empatado, no modo edição (não sai no PDF) */
+function ControleAnexo({ lista, clip, n }: { lista: Dados['clippings']; clip: Dados['clippings'][number]; n: number }) {
+  const ed = useEdicao();
+  if (!ed.ligado || !ed.temPrioridade || ed.empatados(lista, clip) < 2) return null;
+  const grupo = lista.filter(i => i.grupo === clip.grupo);
+  const k = grupo.indexOf(clip);
+  return (
+    <div className="print-hidden w-full max-w-[595pt] -mb-3 flex items-center gap-3 rounded-t-xl border border-b-0 border-dashed border-[#00AE9D] bg-[#F2FBFA] px-4 py-2 text-xs text-[#00695F]">
+      <span className="font-bold text-[#003641]">⇅ Publicação {n}</span>
+      <span className="min-w-0 truncate">empatada com {grupo.length - 1} {grupo.length === 2 ? 'publicação' : 'publicações'} (coleta {clip.dataColeta.split(/[\s,]/)[0]} · post {clip.dataPost})</span>
+      <span className="ml-auto"><Setas rotulo={clip.titulo.slice(0, 40)} podeSubir={k > 0} podeDescer={k < grupo.length - 1} onMover={d => ed.mover(lista, clip.linha, d)} /></span>
+    </div>
+  );
+}
+
 export default function Relatorio({ r, planilha }: { r: Dados; planilha: string }) {
   const m = useModulos().selecao;
+  const ed = useEdicao();
+  // ordem com as mudanças do modo edição (ainda não salvas ou já gravadas nesta sessão)
+  const clippings = ed.ordenar(r.clippings);
+  const timeline = useMemo(() => {
+    const t = ed.ordenar(r.timeline).map(i => ({ ...i }));
+    if (r.timeline.some(i => i.divisaoAbaixo)) marcarDivisao(t);
+    return t;
+  }, [ed, r.timeline]);
   const linha = `${vazio(r.titulo, '[Título]')} · ${vazio(r.unidade, '[Unidade]')} · EDIÇÃO DE ${vazio(r.ultimaAtualizacao)}`.toUpperCase();
   return (
     <>
       <Pagina1 r={r} />
       {/* a chave remonta o Paginador quando os módulos mudam (a paginação é refeita do zero) */}
       {(m.timeline || m.acionamentos) && (
-        <Pagina2 key={`p2-${m.timeline}-${m.acionamentos}`} r={r} linha={linha} timeline={m.timeline} acionamentos={m.acionamentos} />
+        <Pagina2 key={`p2-${m.timeline}-${m.acionamentos}`} r={r} linha={linha} timeline={m.timeline} acionamentos={m.acionamentos} itensTimeline={timeline} />
       )}
       {(m.contexto || m.gatilhos) && (
         <Pagina3 key={`p3-${m.contexto}-${m.gatilhos}`} r={r} linha={linha} contexto={m.contexto} gatilhos={m.gatilhos} />
       )}
-      {m.anexos && r.clippings.map((c, i) => (
-        <Anexo key={c.idUnico} clip={c} indice={i} total={r.clippings.length} linha={linha} protagonismo={r.protagonismo} planilha={planilha} />
+      {m.anexos && clippings.map((c, i) => (
+        <Fragment key={c.idUnico}>
+          <ControleAnexo lista={clippings} clip={c} n={i + 1} />
+          <Anexo clip={c} indice={i} total={clippings.length} linha={linha} protagonismo={r.protagonismo} planilha={planilha} />
+        </Fragment>
       ))}
     </>
   );

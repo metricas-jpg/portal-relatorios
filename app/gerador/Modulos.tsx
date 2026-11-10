@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEdicao } from './Edicao';
 import {
   MODULOS, desligadosDe, padrao, resolver,
   type EscolhasSalvas, type ModuloId, type Origem, type Selecao,
@@ -165,7 +166,9 @@ function Interruptor({ ligado, desativado, rotulo, onClick }: { ligado: boolean;
 export function PainelModulos({ edicao }: { edicao: number }) {
   const c = useContext(Ctx);
   const total = useTotalPaginas();
-  if (!c) return null;
+  const { ligado } = useEdicao();
+  // só aparece no modo edição
+  if (!c || !ligado) return null;
   const ligados = MODULOS.filter(m => c.selecao[m.id]).length;
   const meta = (id: ModuloId) => {
     const n = c.contagem[id];
