@@ -115,6 +115,14 @@ Interruptor **Modo edição** na barra do gerador. Desligado, a tela fica igual 
 
 Gravação (`lib/escrita.ts`, `app/api/prioridade`): só a coluna `prioridade`; antes de gravar, relê as linhas e confere `id_do_print` (ou o título) — se a planilha mudou, não grava e pede para recarregar; cada célula recebe uma nota "Ordem definida pelo gerador por <e-mail> em <data>". Requer a conta do site como **Editor** (Colaborador, em drives compartilhados). Sem a coluna `prioridade` (aceita também `ordem`), tudo funciona como antes e a faixa explica como ativar. "Gerar Relatório Final" desliga o modo antes de imprimir e avisa se houver ordem não salva.
 
+### Nova edição (gerador)
+
+No seletor de edições, **+ Nova edição (NN)** cria a linha da próxima edição em Configuracoes_Gerais (`lib/escrita.ts` → `criarNovaEdicao`, `app/api/nova-edicao`):
+- **Copia da edição anterior** (com a herança resolvida): títulos, unidade, `inicio_monitoramento`, nível e tendência de risco, status e tendência, protagonismo, análise do caso, papel do Sicoob, centro da pauta e gatilhos.
+- **Fica vazio:** o que mudou, o que significa, `risco_texto`, `status_texto`, `ultima_atualizacao`, `hora_atualizacao` e os demais textos.
+- Linha de destino: logo depois da última edição (reaproveita linha só com valores pré-preenchidos). Não escreve em colunas com fórmula (como `edicao_numero` com ARRAYFORMULA no título) nem em células já preenchidas. Se outra pessoa criou a edição antes, não grava.
+- Enquanto a nova edição não tem `ultima_atualizacao`, ela fica "em aberto" e recebe tudo o que foi coletado depois do fechamento da anterior (sem aviso).
+
 ### Ordem dos anexos
 
 Data Coleta mais recente primeiro. No mesmo dia de coleta, Data do post mais recente primeiro. Empate: `prioridade` (1 primeiro, quando preenchida); depois `id_do_print` maior primeiro (quando as duas linhas têm número) ou, sem ele, a linha mais embaixo na planilha primeiro. Linha sem Data Coleta vai para o fim. A ordem da planilha não importa.

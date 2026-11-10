@@ -115,10 +115,10 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
           <PrintController totalAnexos={r.clippings.filter(c => c.printUrl).length} nomeArquivo={nomeArquivo(r, monitoramento.nome)} />
           </div>
         </div>
-        {(eds.length > 1 || atual.descricao) && (
+        {(eds.length > 0 || atual.descricao) && (
           <div className="flex items-center gap-4 border-t border-white/10 pt-3">
-            {eds.length > 1 && (
-              <SeletorEdicao atual={atual.numero} edicoes={eds.map(e => ({ numero: e.numero, rotulo: e.rotulo, data: formatarDataHora(e.ultimaAtualizacao) }))} />
+            {eds.length > 0 && (
+              <SeletorEdicao planilha={planilha} atual={atual.numero} edicoes={eds.map(e => ({ numero: e.numero, rotulo: e.rotulo, data: formatarDataHora(e.ultimaAtualizacao) }))} />
             )}
             {atual.descricao && <p className="text-xs text-slate-300 leading-relaxed"><span className="text-[#C9D200] font-semibold">O que mudou nesta versão:</span> {atual.descricao}</p>}
           </div>
