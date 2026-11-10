@@ -229,6 +229,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const N = dados.edicao ?? edicoes[edicoes.length - 1]?.numero ?? 1;
   const primeira = !edicoes.some(e => e.numero < N);
   const ultimaEdicao = edicoes[edicoes.length - 1]?.numero ?? N;
+  const edicaoAberta = !!edicoes.length && !(edicoes[edicoes.length - 1].ultimaAtualizacao || '').trim();
   const edicaoDe = (explicita: string, data: DataLida | null, aba: string, linha: number): number | null => {
     const n = numeroEdicao(explicita);
     if (n != null) {
@@ -245,7 +246,8 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
       }
       return e.numero;
     }
-    avisar(aba, 'data posterior à última atualização da última edição; conta na última edição até a próxima ser criada', linha);
+    // última edição ainda aberta (sem ultima_atualizacao): é o lugar natural do que veio depois
+    if (!edicaoAberta) avisar(aba, 'data posterior à última atualização da última edição; conta na última edição até a próxima ser criada', linha);
     return ultimaEdicao;
   };
   // até a edição escolhida (acumulado) e só da edição escolhida (novidades)
