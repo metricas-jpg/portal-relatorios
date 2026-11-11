@@ -12,7 +12,7 @@ Next.js 16 na Vercel, com login Google (NextAuth) e dados em planilhas Google li
 | `NEXTAUTH_URL`, `NEXTAUTH_SECRET` | NextAuth |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Login Google |
 | `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` | Service Account (Sheets e Drive) |
-| `PORTAL_PLANILHA_ID`, `PORTAL_ABA` | Opcionais. Lista do **portal**: por padrão, aba `portal_de_relatorios` da planilha central (`GOOGLE_SHEET_ID` não é mais usada) |
+| `PORTAL_PLANILHA_ID`, `PORTAL_ABA_GID`, `PORTAL_ABA` | Opcionais. Lista do **portal**: por padrão, a aba de **gid 801538746** da planilha central, encontrada pelo gid (renomear a aba não quebra). `PORTAL_ABA` (nome) tem prioridade. Se a 1ª linha não for o título da lista (`id_arquivo`, `nome_arquivo`…), o portal mostra um erro explicando. `GOOGLE_SHEET_ID` não é mais usada |
 | `PLANILHA_CENTRAL_ID` | Planilha central com a lista de monitoramentos (padrão: *Monitoramentos Diários 2026*) |
 | `PLANILHA_CENTRAL_ABA` | Aba da lista (padrão: `Monitoramentos 2026`) |
 | `GERADOR_DOMINIOS` | Opcional. Domínios que usam o gerador, separados por vírgula. Padrão: `loggia.com.br` |

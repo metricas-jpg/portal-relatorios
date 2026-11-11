@@ -91,7 +91,7 @@ export async function arquivoPermitido(fileId: string, planilhaId?: string | nul
   const portal = PORTAL_PLANILHA_ID;
   if (portal) {
     const ids = await idsDaFonte(`portal:${portal}`, async () => {
-      const res = await sheetsClient().spreadsheets.values.get({ spreadsheetId: portal, range: intervaloPortal('A2:E') });
+      const res = await sheetsClient().spreadsheets.values.get({ spreadsheetId: portal, range: await intervaloPortal('A2:E') });
       return (res.data.values || []).flat().map(String);
     }, fileId);
     if (ids.has(fileId)) return true;
