@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { emailPodeEntrar } from '@/lib/acesso';
-import { PORTAL_PLANILHA_ID, intervaloPortal } from '@/lib/planilhas';
+import { PORTAL_PLANILHA_ID, abaDoPortal, intervaloPortal } from '@/lib/planilhas';
 
 export async function GET() {
     const session = await getServerSession(authOptions);
@@ -29,10 +29,15 @@ export async function GET() {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: intervaloPortal('A2:G'),
+      range: await intervaloPortal('A1:G'),
     });
 
-    const rows = response.data.values || [];
+    // a 1ª linha precisa ser o título da lista (id_arquivo...); senão a aba apontada não é a do portal
+    const [cab = [], ...rows] = (response.data.values || []) as string[][];
+    if (!/id/i.test(String(cab[0] || '')) || !/nome|arquivo/i.test(String(cab[1] || ''))) {
+      console.error('[portal] a aba lida não tem o formato esperado; títulos:', cab.slice(0, 7));
+      return NextResponse.json({ error: `A aba "${await abaDoPortal()}" da planilha não tem o formato da lista do portal (id_arquivo, nome_arquivo, ...).` }, { status: 500 });
+    }
 
     const relatorios = rows.map((row) => ({
       id: row[0] || '',

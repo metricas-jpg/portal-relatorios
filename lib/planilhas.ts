@@ -1,4 +1,4 @@
-import { chaveCabecalho, lerGrade } from './google-sheets';
+import { chaveCabecalho, lerGrade, sheets } from './google-sheets';
 
 /**
  * Lista de monitoramentos: lida da planilha central (aba "Monitoramentos 2026").
@@ -10,13 +10,36 @@ export const PLANILHA_CENTRAL_ID = process.env.PLANILHA_CENTRAL_ID || '1lwY8VJo5
 export const PLANILHA_CENTRAL_ABA = process.env.PLANILHA_CENTRAL_ABA || 'Monitoramentos 2026';
 
 /**
- * Lista do portal de relatórios (página inicial): aba portal_de_relatorios da planilha central,
- * colunas id_arquivo, nome_arquivo, data_relatorio, url_visualizacao, url_download,
- * titulo_amigavel, data_atualizacao (A a G, título na linha 1). Variáveis opcionais para trocar.
+ * Lista do portal de relatórios (página inicial): aba da planilha central identificada pelo
+ * gid (o número depois de "gid=" no endereço), que não muda quando a aba é renomeada.
+ * Colunas id_arquivo, nome_arquivo, data_relatorio, url_visualizacao, url_download,
+ * titulo_amigavel, data_atualizacao (A a G, título na linha 1).
+ * Variáveis opcionais: PORTAL_PLANILHA_ID, PORTAL_ABA_GID ou PORTAL_ABA (nome; tem prioridade).
  */
 export const PORTAL_PLANILHA_ID = process.env.PORTAL_PLANILHA_ID || PLANILHA_CENTRAL_ID;
-export const PORTAL_ABA = process.env.PORTAL_ABA || 'portal_de_relatorios';
-export const intervaloPortal = (colunas: string) => `'${PORTAL_ABA.replace(/'/g, "''")}'!${colunas}`;
+export const PORTAL_ABA_GID = process.env.PORTAL_ABA_GID || '801538746';
+const ABA_RESERVA = 'portal_de_relatorios';
+
+let cacheAba: { em: number; titulo: string } | null = null;
+/** nome atual da aba do portal (busca pelo gid; guarda por 5 minutos) */
+export async function abaDoPortal(): Promise<string> {
+  if (process.env.PORTAL_ABA) return process.env.PORTAL_ABA;
+  if (cacheAba && Date.now() - cacheAba.em < 5 * 60_000) return cacheAba.titulo;
+  let titulo = ABA_RESERVA;
+  try {
+    const meta = await sheets().spreadsheets.get({ spreadsheetId: PORTAL_PLANILHA_ID, fields: 'sheets.properties(sheetId,title)' });
+    const aba = meta.data.sheets?.find(s => String(s.properties?.sheetId) === PORTAL_ABA_GID)?.properties?.title;
+    if (aba) titulo = aba;
+    else console.error(`[portal] aba gid=${PORTAL_ABA_GID} não encontrada; usando "${ABA_RESERVA}"`);
+  } catch (e) {
+    console.error('[portal] não foi possível ler as abas da planilha:', (e as Error).message);
+  }
+  cacheAba = { em: Date.now(), titulo };
+  return titulo;
+}
+export async function intervaloPortal(colunas: string): Promise<string> {
+  return `'${(await abaDoPortal()).replace(/'/g, "''")}'!${colunas}`;
+}
 
 export interface Monitoramento { id: string; nome: string }
 
