@@ -10,15 +10,17 @@ export const PLANILHA_CENTRAL_ID = process.env.PLANILHA_CENTRAL_ID || '1lwY8VJo5
 export const PLANILHA_CENTRAL_ABA = process.env.PLANILHA_CENTRAL_ABA || 'Monitoramentos 2026';
 
 /**
- * Lista do portal de relatórios (página inicial): aba da planilha central identificada pelo
- * gid (o número depois de "gid=" no endereço), que não muda quando a aba é renomeada.
+ * Lista do portal de relatórios (página inicial): planilha "Base de relatórios", aba "Relatorios".
+ * É uma planilha própria do portal, separada da planilha central que alimenta o gerador.
+ * A aba é encontrada pelo gid (o número depois de "gid=" no endereço), que não muda quando a aba é
+ * renomeada; se o gid não existir, usa a aba de nome "Relatorios".
  * Colunas id_arquivo, nome_arquivo, data_relatorio, url_visualizacao, url_download,
  * titulo_amigavel, data_atualizacao (A a G, título na linha 1).
  * Variáveis opcionais: PORTAL_PLANILHA_ID, PORTAL_ABA_GID ou PORTAL_ABA (nome; tem prioridade).
  */
-export const PORTAL_PLANILHA_ID = process.env.PORTAL_PLANILHA_ID || PLANILHA_CENTRAL_ID;
-export const PORTAL_ABA_GID = process.env.PORTAL_ABA_GID || '801538746';
-const ABA_RESERVA = 'portal_de_relatorios';
+export const PORTAL_PLANILHA_ID = process.env.PORTAL_PLANILHA_ID || '1jjxE-xIaiRG6sU3eDr1bJY7dW18h0-TcZT7gu5m88hU';
+export const PORTAL_ABA_GID = process.env.PORTAL_ABA_GID || '0';
+const ABA_RESERVA = 'Relatorios';
 
 let cacheAba: { em: number; titulo: string } | null = null;
 /** nome atual da aba do portal (busca pelo gid; guarda por 5 minutos) */
