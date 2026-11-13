@@ -16,7 +16,7 @@ import arquivoAcessos from '@/config/acessos.json';
  *
  * 3. ADMINISTRADORES da lista de acessos: os e-mails de ADMINS (lib/acessos.ts).
  *
- * 4. Quais ARQUIVOS do Drive o portal entrega: só os que aparecem na aba "portal_de_relatorios"
+ * 4. Quais ARQUIVOS do Drive o portal entrega: só os que aparecem na aba "Relatorios" da planilha do portal
  *    (portal) ou no "Registro_Central" da planilha de monitoramento do relatório aberto.
  */
 
@@ -83,7 +83,7 @@ async function idsDaFonte(chave: string, ler: () => Promise<string[]>, fileId: s
 }
 
 /**
- * O arquivo só é entregue se o ID aparecer na aba portal_de_relatorios do portal ou no Registro_Central da
+ * O arquivo só é entregue se o ID aparecer na aba Relatorios da planilha do portal (Base de relatórios) ou no Registro_Central da
  * planilha de monitoramento informada (que precisa estar na lista da planilha central).
  */
 export async function arquivoPermitido(fileId: string, planilhaId?: string | null): Promise<boolean> {
