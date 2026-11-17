@@ -78,6 +78,18 @@ export function redeDoRegistro(tipo: string, canal: string, link = ''): { rede: 
   return { rede: peloLink, deduzida: !!peloLink };
 }
 
+/**
+ * titulo_orgao: vazio ou igual ao nome padrão (em qualquer caixa/espaçamento) sai com a quebra
+ * padrão, antes do "e Experiência do Cooperado"; outro texto vale como está, inclusive com a
+ * quebra de linha digitada na célula (Alt+Enter).
+ */
+export const ORGAO_PADRAO = 'Superintendência de Negócios Digitais, Marketing\ne Experiência do Cooperado';
+export function orgaoComQuebra(valor: string | undefined): string {
+  const v = (valor || '').trim();
+  const chave = (t: string) => normalizar(t).replace(/\s+/g, ' ');
+  return !v || chave(v) === chave(ORGAO_PADRAO) ? ORGAO_PADRAO : v;
+}
+
 // ---------- datas ----------
 export interface DataLida { ts: number; dia: number; mes: number; ano: number; temHora: boolean }
 
@@ -436,7 +448,7 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
   const corRisco = nr === 'ALTO' ? '#003641' : nr === 'MEDIO' ? '#c9d200' : '#7db61c';
 
   return {
-    orgao: geral.titulo_orgao || 'Superintendência de Negócios Digitais, Marketing e Experiência do Cooperado',
+    orgao: orgaoComQuebra(geral.titulo_orgao),
     titulo: geral.titulo_crise || '', unidade: geral.subtitulo_unidade || '',
     inicio, edicao: geral.edicao_numero || '',
     atualizadoEm, ultimaAtualizacao: ultima,
