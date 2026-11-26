@@ -89,7 +89,7 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
   ).size;
 
   return (
-    <ModulosProvider planilha={planilha} edicao={atual.numero} contagem={contagens(r)}>
+    <ModulosProvider planilha={planilha} edicao={atual.numero} contagem={contagens(r)} semColeta={r.timeline.filter(i => i.tom !== 'next' && !i.dataColeta).length}>
     <EdicaoProvider planilha={planilha} temPrioridade={r.temPrioridade} itens={[...r.timeline, ...r.clippings]}>
     <div className="doc">
       {/* barra de controle (não sai na impressão) */}

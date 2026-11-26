@@ -236,6 +236,9 @@ function ControleTimeline({ lista, item }: { lista: ItemTimeline[]; item: ItemTi
 }
 
 function LinhaTimeline({ item, lista }: { item: ItemTimeline; lista: ItemTimeline[] }) {
+  // data exibida: do post ou da coleta (escolha do painel "Montar relatório"); sem coleta, fica a do post
+  const { dataTimeline } = useModulos();
+  const data = dataTimeline === 'coleta' && item.dataColeta ? item.dataColeta : item.data;
   const ponto = item.tom === 'next' ? 'next' : item.tom === 'ctx' ? 'p' : `g ${item.tom}`;
   const tag = TAG[item.tom];
   const ed = useEdicao();
@@ -244,7 +247,7 @@ function LinhaTimeline({ item, lista }: { item: ItemTimeline; lista: ItemTimelin
     <>
       <div className={`tl-row ${item.tom}${movel ? ' tl-movel' : ''}`}>
         <ControleTimeline lista={lista} item={item} />
-        <span className="data">{item.tom === 'next' ? 'Próximo' : item.data}</span>
+        <span className="data">{item.tom === 'next' ? 'Próximo' : data}</span>
         <i className={`ponto ${ponto}`} />
         <div className="txt">{rico(item.texto)}{item.complemento && <> <b>[{item.complemento}]</b></>}</div>
         {tag && <span className={`tag ${tag[1]}`}>{tag[0]}</span>}
@@ -355,7 +358,7 @@ function ControleAnexo({ lista, clip, n }: { lista: Dados['clippings']; clip: Da
 }
 
 export default function Relatorio({ r, planilha }: { r: Dados; planilha: string }) {
-  const m = useModulos().selecao;
+  const { selecao: m, dataTimeline } = useModulos();
   const ed = useEdicao();
   // ordem com as mudanças do modo edição (ainda não salvas ou já gravadas nesta sessão)
   const clippings = ed.ordenar(r.clippings);
@@ -370,7 +373,7 @@ export default function Relatorio({ r, planilha }: { r: Dados; planilha: string 
       <Pagina1 r={r} />
       {/* a chave remonta o Paginador quando os módulos mudam (a paginação é refeita do zero) */}
       {(m.timeline || m.acionamentos) && (
-        <Pagina2 key={`p2-${m.timeline}-${m.acionamentos}`} r={r} linha={linha} timeline={m.timeline} acionamentos={m.acionamentos} itensTimeline={timeline} />
+        <Pagina2 key={`p2-${m.timeline}-${m.acionamentos}-${dataTimeline}`} r={r} linha={linha} timeline={m.timeline} acionamentos={m.acionamentos} itensTimeline={timeline} />
       )}
       {(m.contexto || m.gatilhos) && (
         <Pagina3 key={`p3-${m.contexto}-${m.gatilhos}`} r={r} linha={linha} contexto={m.contexto} gatilhos={m.gatilhos} />

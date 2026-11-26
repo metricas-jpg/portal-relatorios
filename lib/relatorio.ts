@@ -140,7 +140,13 @@ export type Tom = 'neg' | 'neu' | 'pos' | 'acl' | 'ctx' | 'next';
  * título, conferidos antes de gravar), o grupo de empate e a prioridade lida da planilha.
  */
 export interface Reordenavel { linha: number; idPrint: string; fato: string; grupo: string; prioridade: number | null }
-export interface ItemTimeline extends Reordenavel { data: string; texto: string; tom: Tom; complemento?: string; novo?: boolean; divisaoAbaixo?: boolean }
+export interface ItemTimeline extends Reordenavel {
+  /** data do post, como aparece na linha do tempo (dd/mm, ou o texto da planilha) */
+  data: string;
+  /** Data Coleta, no mesmo formato (vazio = sem data de coleta); usada quando o gerador mostra as datas de coleta */
+  dataColeta: string;
+  texto: string; tom: Tom; complemento?: string; novo?: boolean; divisaoAbaixo?: boolean;
+}
 export interface DiaGrafico { rotulo: string; porRede: Record<Rede, number>; total: number }
 export interface Clipping extends Reordenavel {
   idUnico: string; rede: Rede; veiculo: string; titulo: string; dataPost: string; dataColeta: string;
@@ -347,11 +353,14 @@ export function montarRelatorio(dados: RelatorioDados): Relatorio {
     }
     if (!texto) avisar('Registro_Central', 'marcado para a linha do tempo, mas sem Texto Timeline nem Fato', r.linha);
     // data completa (19/10/2026) aparece como dd/mm, igual ao modelo; faixas e textos ficam como estão
-    const data = r.dPost && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(r.dataPost.trim()) ? ddmm(r.dPost) : (r.dataPost || '');
+    const comoAparece = (lida: DataLida | null, texto: string) =>
+      lida && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test((texto || '').trim()) ? ddmm(lida) : (texto || '').trim();
+    const data = comoAparece(r.dPost, r.dataPost);
+    const dataColeta = comoAparece(r.dColeta, r.dataColeta);
     const novo = r.proximoMarco || daEdicao(r.ed);
     // empate = mesmo dia de post (e mesma condição de próximo marco)
     const grupo = r.dPost ? `${r.proximoMarco ? 'P' : 'T'}|${chaveDia(r.dPost)}` : '';
-    const item: ItemTimeline = { data, texto, tom, complemento, novo, linha: r.linha, idPrint: r.idPrint, fato: r.fato, grupo, prioridade: r.prioridade };
+    const item: ItemTimeline = { data, dataColeta, texto, tom, complemento, novo, linha: r.linha, idPrint: r.idPrint, fato: r.fato, grupo, prioridade: r.prioridade };
     return { item, ts: r.dPost?.ts, dia: r.dPost ? tsDia(r.dPost) : null, proximo: r.proximoMarco, ordem };
   });
   // Próximo marco primeiro; depois do dia mais recente para o mais antigo (itens sem data no fim);

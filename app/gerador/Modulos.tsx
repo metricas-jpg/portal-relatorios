@@ -4,11 +4,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useEdicao } from './Edicao';
 import {
   MODULOS, desligadosDe, padrao, resolver,
-  type EscolhasSalvas, type ModuloId, type Origem, type Selecao,
+  type DataTimeline, type EscolhasSalvas, type ModuloId, type Origem, type Selecao,
 } from '@/lib/modulos';
 
 /**
- * Escolha dos módulos do relatório (linha do tempo, acionamentos, contexto, gatilhos, anexos).
+ * Escolha dos módulos do relatório (linha do tempo, acionamentos, contexto, gatilhos, anexos)
+ * e de qual data aparece na linha do tempo (post ou coleta; a ordem dos itens não muda).
  * - Guardada por planilha e edição, compartilhada pela equipe (app/api/modulos). Sem o
  *   armazenamento configurado, fica só neste navegador.
  * - Muda a prévia na hora; nada do painel sai na impressão.
@@ -21,7 +22,11 @@ interface Contexto {
   ligado: (id: ModuloId) => boolean;
   alternar: (id: ModuloId) => void;
   restaurar: () => void;
+  dataTimeline: DataTimeline;
+  mudarDataTimeline: (d: DataTimeline) => void;
   contagem: Record<ModuloId, number>;
+  /** itens da linha do tempo sem Data Coleta (mostram a data do post quando a opção é coleta) */
+  semColeta: number;
   origem: Origem;
   status: Status;
   compartilhado: boolean;
@@ -30,9 +35,9 @@ interface Contexto {
 const Ctx = createContext<Contexto | null>(null);
 
 /** módulos ligados; fora do provedor (ex.: testes), tudo ligado */
-export function useModulos(): Pick<Contexto, 'ligado' | 'selecao'> {
+export function useModulos(): Pick<Contexto, 'ligado' | 'selecao' | 'dataTimeline'> {
   const c = useContext(Ctx);
-  return c ?? { ligado: () => true, selecao: Object.fromEntries(MODULOS.map(m => [m.id, true])) as Selecao };
+  return c ?? { ligado: () => true, selecao: Object.fromEntries(MODULOS.map(m => [m.id, true])) as Selecao, dataTimeline: 'post' };
 }
 
 const chaveLocal = (planilha: string) => `modulos:${planilha}`;
@@ -43,16 +48,19 @@ function gravarLocal(planilha: string, salvas: EscolhasSalvas) {
   try { localStorage.setItem(chaveLocal(planilha), JSON.stringify(salvas)); } catch { /* navegador sem armazenamento */ }
 }
 
-export function ModulosProvider({ planilha, edicao, contagem, children }: {
-  planilha: string; edicao: number; contagem: Record<ModuloId, number>; children: ReactNode;
+export function ModulosProvider({ planilha, edicao, contagem, semColeta = 0, children }: {
+  planilha: string; edicao: number; contagem: Record<ModuloId, number>; semColeta?: number; children: ReactNode;
 }) {
   const [selecao, setSelecao] = useState<Selecao>(() => padrao(contagem));
+  const [dataTimeline, setDataTimeline] = useState<DataTimeline>('post');
   const [origem, setOrigem] = useState<Origem>({ tipo: 'padrao' });
   const [status, setStatus] = useState<Status>('carregando');
   const [compartilhado, setCompartilhado] = useState(true);
   const salvasRef = useRef<EscolhasSalvas>({});
   const selecaoRef = useRef(selecao);
   useEffect(() => { selecaoRef.current = selecao; }, [selecao]);
+  const dataRef = useRef(dataTimeline);
+  useEffect(() => { dataRef.current = dataTimeline; }, [dataTimeline]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // carrega a escolha salva (da equipe ou, sem armazenamento, deste navegador)
@@ -68,18 +76,19 @@ export function ModulosProvider({ planilha, edicao, contagem, children }: {
         const res = resolver(salvas, edicao, contagem);
         setCompartilhado(d.compartilhado);
         setSelecao(res.selecao);
+        setDataTimeline(res.dataTimeline);
         setOrigem(res.origem);
         setStatus('pronto');
       });
     return () => { vivo = false; };
   }, [planilha, edicao, contagem]);
 
-  const salvar = useCallback((nova: Selecao) => {
+  const salvar = useCallback((nova: Selecao, data: DataTimeline) => {
     if (timer.current) clearTimeout(timer.current);
     setStatus('salvando');
     timer.current = setTimeout(async () => {
       const desligados = desligadosDe(nova);
-      const local = { desligados, por: 'você', em: new Date().toISOString() };
+      const local = { desligados, dataTimeline: data, por: 'você', em: new Date().toISOString() };
       if (!compartilhado) {
         salvasRef.current = { ...salvasRef.current, [edicao]: local };
         gravarLocal(planilha, salvasRef.current);
@@ -90,7 +99,7 @@ export function ModulosProvider({ planilha, edicao, contagem, children }: {
       try {
         const res = await fetch('/api/modulos', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ planilha, edicao, desligados }),
+          body: JSON.stringify({ planilha, edicao, desligados, dataTimeline: data }),
         });
         if (!res.ok) throw new Error(String(res.status));
         const { salva } = await res.json();
@@ -107,18 +116,27 @@ export function ModulosProvider({ planilha, edicao, contagem, children }: {
     const nova = { ...selecaoRef.current, [id]: !selecaoRef.current[id] };
     selecaoRef.current = nova;
     setSelecao(nova);
-    salvar(nova);
+    salvar(nova, dataRef.current);
+  }, [salvar]);
+
+  const mudarDataTimeline = useCallback((d: DataTimeline) => {
+    if (d === dataRef.current) return;
+    dataRef.current = d;
+    setDataTimeline(d);
+    salvar(selecaoRef.current, d);
   }, [salvar]);
 
   const restaurar = useCallback(() => {
     const nova = padrao(contagem);
+    selecaoRef.current = nova; dataRef.current = 'post';
     setSelecao(nova);
-    salvar(nova);
+    setDataTimeline('post');
+    salvar(nova, 'post');
   }, [contagem, salvar]);
 
   const valor = useMemo<Contexto>(() => ({
-    selecao, ligado: id => selecao[id], alternar, restaurar, contagem, origem, status, compartilhado,
-  }), [selecao, alternar, restaurar, contagem, origem, status, compartilhado]);
+    selecao, ligado: id => selecao[id], alternar, restaurar, dataTimeline, mudarDataTimeline, contagem, semColeta, origem, status, compartilhado,
+  }), [selecao, alternar, restaurar, dataTimeline, mudarDataTimeline, contagem, semColeta, origem, status, compartilhado]);
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }
@@ -132,7 +150,7 @@ const quando = (iso: string) => {
 const pessoa = (email: string) => (email.includes('@') ? email.split('@')[0] : email);
 
 function textoOrigem(o: Origem, edicaoAtual: number) {
-  if (o.tipo === 'padrao') return 'Padrão: tudo ligado, menos o que está sem dados.';
+  if (o.tipo === 'padrao') return 'Padrão: tudo ligado, menos o que está sem dados; datas do post na linha do tempo.';
   if (o.tipo === 'anterior') return `Herdado da edição ${o.edicao} (${pessoa(o.por)}, ${quando(o.em)}). Ao mudar, salva para a edição ${edicaoAtual}.`;
   return `Escolha da edição ${o.edicao}: ${pessoa(o.por)}, ${quando(o.em)}.`;
 }
@@ -160,6 +178,37 @@ function Interruptor({ ligado, desativado, rotulo, onClick }: { ligado: boolean;
     >
       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${ligado ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
     </button>
+  );
+}
+
+/** "Datas: Post | Coleta" da linha do tempo (só muda a data exibida; a ordem continua a mesma) */
+function EscolhaData({ c }: { c: Contexto }) {
+  const opcoes: [DataTimeline, string][] = [['post', 'Post'], ['coleta', 'Coleta']];
+  return (
+    <div className="basis-full mt-2">
+      <div className="flex items-center justify-between gap-2">
+        <span id="rotulo-data-tl" className="text-[11px] text-slate-500">Datas exibidas</span>
+        <div role="radiogroup" aria-labelledby="rotulo-data-tl" className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5">
+          {opcoes.map(([v, rot]) => {
+            const ativo = c.dataTimeline === v;
+            return (
+              <button
+                key={v} type="button" role="radio" aria-checked={ativo} disabled={c.status === 'carregando'}
+                onClick={() => c.mudarDataTimeline(v)}
+                className={`px-2.5 py-0.5 text-[11px] font-semibold rounded transition disabled:opacity-50 ${ativo ? 'bg-[#003641] text-white shadow-sm' : 'text-slate-600 hover:text-[#003641]'}`}
+              >
+                {rot}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {c.dataTimeline === 'coleta' && c.semColeta > 0 && (
+        <p className="mt-1 text-[11px] leading-snug text-amber-700">
+          {c.semColeta} {c.semColeta === 1 ? 'item sem Data Coleta mostra' : 'itens sem Data Coleta mostram'} a data do post.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -208,12 +257,13 @@ export function PainelModulos({ edicao }: { edicao: number }) {
           const on = c.selecao[m.id];
           const vazio = !c.contagem[m.id];
           return (
-            <li key={m.id} className="flex items-center justify-between gap-3 py-2">
-              <span className="min-w-0">
+            <li key={m.id} className="flex flex-wrap items-center justify-between gap-x-3 py-2">
+              <span className="min-w-0 flex-1">
                 <span className={`block text-sm font-medium ${on ? '' : 'text-slate-400'}`}>{m.nome}</span>
                 <span className={`block text-[11px] ${vazio ? 'text-amber-700' : 'text-slate-500'}`}>{meta(m.id)}</span>
               </span>
               <Interruptor ligado={on} desativado={c.status === 'carregando'} rotulo={m.nome} onClick={() => c.alternar(m.id)} />
+              {m.id === 'timeline' && on && !vazio && <EscolhaData c={c} />}
             </li>
           );
         })}
