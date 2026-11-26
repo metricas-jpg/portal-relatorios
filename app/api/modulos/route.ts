@@ -4,12 +4,12 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { emailPodeGerar } from '@/lib/acesso';
 import { obterMonitoramento } from '@/lib/planilhas';
 import { kv, kvConfigurado } from '@/lib/kv';
-import { ehModulo, type EscolhaSalva, type EscolhasSalvas } from '@/lib/modulos';
+import { ehDataTimeline, ehModulo, type EscolhaSalva, type EscolhasSalvas } from '@/lib/modulos';
 
 /**
  * Módulos escolhidos no gerador, compartilhados pela equipe.
- * GET ?planilha=ID → { compartilhado, salvas: { "1": { desligados, por, em }, ... } }
- * POST { planilha, edicao, desligados } → grava a escolha daquela edição.
+ * GET ?planilha=ID → { compartilhado, salvas: { "1": { desligados, dataTimeline, por, em }, ... } }
+ * POST { planilha, edicao, desligados, dataTimeline? } → grava a escolha daquela edição.
  * Sem armazenamento configurado, responde compartilhado: false e o navegador guarda localmente.
  */
 
@@ -36,7 +36,11 @@ export async function GET(req: NextRequest) {
     for (let i = 0; i + 1 < lista.length; i += 2) {
       try {
         const v = JSON.parse(lista[i + 1]) as EscolhaSalva;
-        salvas[lista[i]] = { desligados: (v.desligados || []).filter(ehModulo), por: v.por || '', em: v.em || '' };
+        salvas[lista[i]] = {
+          desligados: (v.desligados || []).filter(ehModulo),
+          ...(ehDataTimeline(v.dataTimeline) ? { dataTimeline: v.dataTimeline } : {}),
+          por: v.por || '', em: v.em || '',
+        };
       } catch { /* valor corrompido: ignora */ }
     }
     return NextResponse.json({ compartilhado: true, salvas }, { headers: semCache });
@@ -49,13 +53,17 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const email = await quem();
   if (!email) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  const c = (await req.json().catch(() => ({}))) as { planilha?: unknown; edicao?: unknown; desligados?: unknown };
+  const c = (await req.json().catch(() => ({}))) as { planilha?: unknown; edicao?: unknown; desligados?: unknown; dataTimeline?: unknown };
   const edicao = Number(c.edicao);
   if (!(await planilhaValida(c.planilha)) || !Number.isInteger(edicao) || edicao < 1 || edicao > 999 || !Array.isArray(c.desligados)) {
     return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
   }
   if (!kvConfigurado()) return NextResponse.json({ error: 'Armazenamento compartilhado não configurado' }, { status: 503 });
-  const salva: EscolhaSalva = { desligados: [...new Set(c.desligados.filter(ehModulo))], por: email, em: new Date().toISOString() };
+  const salva: EscolhaSalva = {
+    desligados: [...new Set(c.desligados.filter(ehModulo))],
+    dataTimeline: ehDataTimeline(c.dataTimeline) ? c.dataTimeline : 'post',
+    por: email, em: new Date().toISOString(),
+  };
   try {
     await kv(['HSET', chave(c.planilha as string), edicao, JSON.stringify(salva)]);
     return NextResponse.json({ ok: true, salva });

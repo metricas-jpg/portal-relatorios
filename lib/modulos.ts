@@ -2,7 +2,7 @@ import type { Relatorio } from './relatorio';
 
 /**
  * Módulos do relatório que podem ser ligados e desligados no gerador. A página 1 é fixa.
- * A escolha é guardada por planilha e por edição (ver app/api/modulos): uma edição sem escolha
+ * A escolha (e a data mostrada na linha do tempo: post ou coleta) é guardada por planilha e por edição (ver app/api/modulos): uma edição sem escolha
  * própria herda a da edição anterior mais próxima; sem nenhuma, vale o padrão.
  */
 export const MODULOS = [
@@ -15,8 +15,12 @@ export const MODULOS = [
 
 export type ModuloId = (typeof MODULOS)[number]['id'];
 export type Selecao = Record<ModuloId, boolean>;
-/** escolha salva de uma edição */
-export interface EscolhaSalva { desligados: ModuloId[]; por: string; em: string }
+/** que data aparece ao lado de cada item da linha do tempo (a ordem não muda) */
+export type DataTimeline = 'post' | 'coleta';
+export const ehDataTimeline = (v: unknown): v is DataTimeline => v === 'post' || v === 'coleta';
+
+/** escolha salva de uma edição (escolhas antigas não têm dataTimeline: vale 'post') */
+export interface EscolhaSalva { desligados: ModuloId[]; dataTimeline?: DataTimeline; por: string; em: string }
 export type EscolhasSalvas = Record<string, EscolhaSalva>;
 
 export const IDS = MODULOS.map(m => m.id) as ModuloId[];
@@ -47,15 +51,16 @@ export type Origem =
   | { tipo: 'anterior'; edicao: number; por: string; em: string }
   | { tipo: 'padrao' };
 
-export function resolver(salvas: EscolhasSalvas, edicao: number, cont: Record<ModuloId, number>): { selecao: Selecao; origem: Origem } {
+export function resolver(salvas: EscolhasSalvas, edicao: number, cont: Record<ModuloId, number>): { selecao: Selecao; dataTimeline: DataTimeline; origem: Origem } {
+  const dataDe = (e: EscolhaSalva) => (ehDataTimeline(e.dataTimeline) ? e.dataTimeline : 'post');
   const propria = salvas[String(edicao)];
-  if (propria) return { selecao: selecaoDe(propria.desligados), origem: { tipo: 'edicao', edicao, por: propria.por, em: propria.em } };
+  if (propria) return { selecao: selecaoDe(propria.desligados), dataTimeline: dataDe(propria), origem: { tipo: 'edicao', edicao, por: propria.por, em: propria.em } };
   const anterior = Object.keys(salvas).map(Number).filter(n => n < edicao).sort((x, y) => y - x)[0];
   if (anterior != null) {
     const s = salvas[String(anterior)];
-    return { selecao: selecaoDe(s.desligados), origem: { tipo: 'anterior', edicao: anterior, por: s.por, em: s.em } };
+    return { selecao: selecaoDe(s.desligados), dataTimeline: dataDe(s), origem: { tipo: 'anterior', edicao: anterior, por: s.por, em: s.em } };
   }
-  return { selecao: padrao(cont), origem: { tipo: 'padrao' } };
+  return { selecao: padrao(cont), dataTimeline: 'post', origem: { tipo: 'padrao' } };
 }
 
 /** a que módulo um aviso do painel amarelo se refere (null = geral, sempre aparece) */
